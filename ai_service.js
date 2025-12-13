@@ -27,7 +27,7 @@ async function checkLocalAIAvailability() {
         // 1. Try modern `self.ai.languageModel` API
         if (self.ai && self.ai.languageModel) {
             const capabilities = await self.ai.languageModel.capabilities({
-                expectedOutputLanguages: ['en']
+                outputLanguage: 'en'
             });
             console.log('[AI Service] Local AI capabilities:', capabilities);
 
@@ -107,7 +107,7 @@ async function getLocalAISession(systemPrompt) {
         if (self.ai && self.ai.languageModel) {
             localAISession = await self.ai.languageModel.create({
                 systemPrompt: systemPrompt,
-                expectedOutputLanguages: ['en'] // Required by Chrome AI API
+                outputLanguage: 'en' // Required by Chrome AI API - singular for modern API
             });
         }
         // Fallback to legacy API

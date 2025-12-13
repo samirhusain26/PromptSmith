@@ -415,5 +415,5 @@ MIT
 
 <p align="center">
   Made with ❤️ for better prompts<br>
-  <sub>PromptSmith v1.1.0</sub>
+  <sub>PromptSmith v1.0</sub>
 </p>

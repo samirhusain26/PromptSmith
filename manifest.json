@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "PromptSmith",
-    "version": "1.1.0",
-    "description": "Polish your prompts with AI. Uses Gemini Nano locally, or falls back to Gemini Flash cloud API. Works on ChatGPT, Claude, and Gemini.",
+    "version": "1.0",
+    "description": "Polish your prompts with AI. Uses Gemini Nano locally, or falls back to Gemini Flash cloud API. Works on ChatGPT, Claude, & Gemini.",
     "author": "PromptSmith",
     "permissions": [
         "storage",

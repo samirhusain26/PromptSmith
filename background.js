@@ -33,6 +33,9 @@ chrome.runtime.onInstalled.addListener((details) => {
     }, () => {
       console.log('[PromptSmith] Default settings initialized');
     });
+
+    // Open settings page on first install
+    chrome.runtime.openOptionsPage();
   }
 
   console.log(`[PromptSmith] Extension ${details.reason}: v${chrome.runtime.getManifest().version}`);
