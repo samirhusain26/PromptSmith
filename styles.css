@@ -1,0 +1,314 @@
+/**
+ * Local Prompt Polish - Styles
+ * Beautiful, branded button that changes based on site context
+ */
+
+/* =========================================
+   BASE SPLIT BUTTON STYLES
+   ========================================= */
+
+.lpp-button-group {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    border-radius: 8px;
+    /* Slightly tighter radius */
+    background: #1e1e2e;
+    /* Fallback dark bg */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    z-index: 10000;
+    margin: 4px;
+    height: 36px;
+}
+
+/* Base Gradient for Default Theme */
+.lpp-button-group:not(.lpp-native-gemini) {
+    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+    box-shadow:
+        0 2px 8px rgba(129, 140, 248, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* Shared Button Reset */
+.lpp-button-group button {
+    all: unset;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    transition: background 0.1s;
+    box-sizing: border-box;
+}
+
+/* Main Action Button */
+.lpp-polish-action {
+    padding: 0 10px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    gap: 6px;
+}
+
+.lpp-polish-action .lpp-icon {
+    font-size: 16px;
+}
+
+/* Dropdown Trigger */
+.lpp-dropdown-trigger {
+    padding: 0 6px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    /* Separator */
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    font-size: 10px;
+}
+
+.lpp-dropdown-trigger:hover,
+.lpp-polish-action:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* =========================================
+   GEMINI NATIVE THEME
+   ========================================= */
+
+.lpp-button-group.lpp-native-gemini {
+    background: transparent;
+    box-shadow: none;
+    color: #444746;
+    /* Gemini Dark Text */
+    height: 40px;
+    /* Match standard toolbar height */
+    margin: 0 4px;
+    /* Tight spacing in toolbar */
+    border-radius: 20px;
+    /* Pill shape */
+}
+
+/* Dark mode detection for Gemini (approximation) */
+@media (prefers-color-scheme: dark) {
+    .lpp-button-group.lpp-native-gemini {
+        color: #e3e3e3;
+    }
+}
+
+.lpp-button-group.lpp-native-gemini button {
+    color: inherit;
+    border-radius: 0;
+}
+
+.lpp-button-group.lpp-native-gemini .lpp-polish-action {
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+    padding-left: 12px;
+}
+
+.lpp-button-group.lpp-native-gemini .lpp-dropdown-trigger {
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    padding-right: 8px;
+    border-left: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.lpp-button-group.lpp-native-gemini:hover {
+    background: rgba(128, 128, 128, 0.1);
+    /* Subtle hover bg */
+}
+
+/* =========================================
+   DROPDOWN MENU
+   ========================================= */
+
+.lpp-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: #1e1e2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 180px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 10001;
+    overflow: hidden;
+    animation: lpp-fade-in 0.15s ease-out;
+}
+
+/* Portal Override */
+.lpp-dropdown-menu.lpp-dropdown-portal {
+    position: fixed;
+    /* JS sets top/left */
+    margin-top: 0;
+    right: auto;
+    display: flex;
+    /* Force show */
+    z-index: 999999;
+    /* Ensure on top of everything */
+}
+
+.lpp-button-group.open .lpp-dropdown-menu:not(.lpp-dropdown-portal) {
+    display: flex;
+}
+
+.lpp-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    transition: background 0.1s;
+}
+
+.lpp-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.lpp-dropdown-item.selected {
+    background: rgba(129, 140, 248, 0.2);
+    color: #a78bfa;
+}
+
+.lpp-item-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+/* =========================================
+   STATES (Loading, Success, Error)
+   ========================================= */
+
+/* Loading Pulse */
+.lpp-button-group.lpp-loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.lpp-button-group.lpp-loading .lpp-icon {
+    animation: lpp-pulse-fade 2s ease-in-out infinite;
+    display: inline-block;
+}
+
+@keyframes lpp-pulse-fade {
+    0% {
+        opacity: 0.4;
+        transform: scale(0.95);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0.4;
+        transform: scale(0.95);
+    }
+}
+
+@keyframes lpp-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Success Flash */
+.lpp-button-group.lpp-success:not(.lpp-native-gemini) {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.lpp-button-group.lpp-success.lpp-native-gemini .lpp-polish-action {
+    color: #16a34a;
+    /* Green text for success on native */
+}
+
+/* Error Flash */
+.lpp-button-group.lpp-error:not(.lpp-native-gemini) {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.lpp-button-group.lpp-error.lpp-native-gemini .lpp-polish-action {
+    color: #ef4444;
+    /* Red text for error on native */
+}
+
+/* =========================================
+   STATUS POPUP
+   ========================================= */
+
+.lpp-status-popup {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    background: #1e1e2e;
+    color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: lpp-slide-in 0.3s ease;
+}
+
+.lpp-status-popup.lpp-success {
+    border-left: 4px solid #22c55e;
+}
+
+.lpp-status-popup.lpp-error {
+    border-left: 4px solid #ef4444;
+}
+
+.lpp-status-popup.lpp-info {
+    border-left: 4px solid #818cf8;
+}
+
+@keyframes lpp-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes lpp-slide-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+.lpp-status-popup.lpp-hiding {
+    animation: lpp-slide-out 0.3s ease forwards;
+}

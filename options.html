@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptSmith - Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #030712;
+      --bg-card: rgba(17, 24, 39, 0.75);
+      --bg-card-hover: rgba(31, 41, 55, 0.85);
+
+      /* Refined Borders */
+      --border: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(255, 255, 255, 0.12);
+
+      /* Modern Indigo Accent */
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.2);
+
+      /* Typography Colors */
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+
+      /* States */
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+
+      --card-radius: 16px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-page);
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.08), transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.08), transparent 40%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: block;
+      padding: 3rem;
+      overflow-y: auto;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Landscape Grid Layout - Retained but polished */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: min-content;
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      height: auto;
+      max-height: none;
+      padding-bottom: 4rem;
+    }
+
+    /* Modern Glass Card */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      transition: var(--transition);
+      position: relative;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-card-hover);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-header h2 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.9;
+    }
+
+    .card-header .icon {
+      font-size: 1.1rem;
+      opacity: 0.8;
+      filter: drop-shadow(0 0 8px var(--accent-glow));
+    }
+
+    /* Grid Areas */
+    .header-block {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-area h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-icon {
+      font-size: 2.25rem;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-6px);
+      }
+    }
+
+    /* ----- ROW 1 & 2: Main Work Area ----- */
+    .system-prompt-block {
+      grid-column: span 2;
+      grid-row: span 2;
+      min-height: 480px;
+    }
+
+    .model-selection-block {
+      grid-column: span 2;
+      min-height: 220px;
+    }
+
+    .default-method-block {
+      grid-column: span 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      min-height: 220px;
+    }
+
+    .sites-block {
+      grid-column: span 1;
+      min-height: 220px;
+    }
+
+    /* ----- ROW 3: Settings ----- */
+    .api-key-block {
+      grid-column: span 2;
+    }
+
+    .webllm-block {
+      grid-column: span 2;
+    }
+
+    /* ----- ROW 4: Info ----- */
+    .how-it-works-block {
+      grid-column: span 4;
+    }
+
+    /* Footer */
+    .footer-block {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Form Components */
+    textarea {
+      width: 100%;
+      height: 100%;
+      flex: 1;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      resize: vertical;
+      transition: var(--transition);
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 0 1px var(--accent-glow);
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .preset-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .preset-chip:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    /* Model Selection Grid */
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      width: 100%;
+      height: 100%;
+    }
+
+    .model-option {
+      position: relative;
+      cursor: pointer;
+      height: 100%;
+    }
+
+    .model-option input {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    .model-card {
+      height: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: var(--transition);
+    }
+
+    .model-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .model-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .model-option input:checked+.model-card {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .model-option input:checked+.model-card .model-title {
+      color: var(--accent);
+    }
+
+    .model-option:hover .model-card {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+    }
+
+    /* Default Method Status */
+    .current-method {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .method-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      filter: drop-shadow(0 0 12px var(--accent-glow));
+    }
+
+    .method-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .method-status {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      padding: 0.35rem 0.85rem;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+    }
+
+    /* Sites Toggles */
+    .toggles-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      height: 100%;
+      align-content: center;
+    }
+
+    .site-tile {
+      position: relative;
+      cursor: pointer;
+      aspect-ratio: 1;
+    }
+
+    .site-tile input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+    }
+
+    .site-card {
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .site-tile:hover .site-card {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+    }
+
+    .site-tile input:checked+.site-card {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .site-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .site-tile input:checked+.site-card .site-name {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Inputs & Buttons */
+    .input-wrapper {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      flex: 1;
+      height: 42px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    input[type="password"]:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow);
+    }
+
+    .btn-mini,
+    .btn-primary,
+    .btn-secondary {
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+    }
+
+    .btn-mini {
+      width: 42px;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border);
+      color: var(--text-secondary);
+      padding: 0;
+    }
+
+    .btn-mini:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      padding: 0 1.5rem;
+    }
+
+    .btn-primary:hover {
+      background: #4f46e5;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border-color: var(--border);
+      padding: 0 1.25rem;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--border-hover);
+    }
+
+    /* Footer & Info */
+    /* Footer Link - Prominent Style */
+    .dev-link {
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      padding: 0.75rem 1.5rem;
+      border-radius: 99px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .dev-link:hover {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+      border-color: rgba(168, 85, 247, 0.5);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    .info-item h4 {
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .info-item p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .info-item a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--accent);
+      transition: all 0.2s;
+    }
+
+    .info-item a:hover {
+      color: #a5b4fc;
+      border-bottom-style: solid;
+    }
+
+    .info-item ol,
+    .info-item ul {
+      margin-top: 0.5rem;
+      padding-left: 1.25rem;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .info-item li {
+      margin-bottom: 0.25rem;
+    }
+
+    .info-item code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.8em;
+      color: #e2e8f0;
+    }
+
+    /* Status Messages */
+    .status-msg {
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .status-msg.show {
+      opacity: 1;
+    }
+
+    .status-msg.error {
+      color: var(--error);
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 900px) {
+      .grid-container {
+        grid-template-columns: 1fr;
+      }
+
+      .system-prompt-block,
+      .model-selection-block,
+      .default-method-block,
+      .sites-block,
+      .api-key-block,
+      .webllm-block,
+      .how-it-works-block {
+        grid-column: span 1;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid-container">
+    <!-- Header -->
+    <div class="header-block">
+      <div class="logo-area">
+        <span class="logo-icon">✨</span>
+        <h1>PromptSmith</h1>
+      </div>
+      <div style="color: var(--text-secondary); font-size: 0.9rem;">
+        Privacy-first AI Prompt Refinement
+      </div>
+    </div>
+
+    <!-- System Prompt (2x2) -->
+    <div class="card system-prompt-block">
+      <div class="card-header">
+        <span class="icon">🎯</span>
+        <h2>System Prompt</h2>
+      </div>
+      <div class="preset-chips">
+        <button class="preset-chip" data-preset="architect">🏗️ Architect</button>
+        <button class="preset-chip" data-preset="agent">🕵️ Agent</button>
+        <button class="preset-chip" data-preset="compiler">💻 Compiler</button>
+        <button class="preset-chip" data-preset="structurer">🧱 Structurer</button>
+        <button class="preset-chip" data-preset="primer">🧠 Primer</button>
+        <button class="preset-chip" data-preset="polisher">✍️ Polisher</button>
+      </div>
+      <textarea id="systemPrompt" placeholder="Enter instructions for how the AI should polish your prompts..."
+        spellcheck="true"></textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+        <span id="charCount" style="font-size: 0.8rem; color: var(--text-secondary);">0 chars</span>
+        <div>
+          <button id="resetBtn" class="btn-secondary">Reset</button>
+          <button id="saveBtn" class="btn-primary" style="margin-right:0;">Save</button>
+        </div>
+      </div>
+      <div id="status" class="status-msg"></div>
+    </div>
+
+    <!-- Model Selection (2x1) -->
+    <div class="card model-selection-block">
+      <div class="card-header">
+        <span class="icon">🤖</span>
+        <h2>Model Selection</h2>
+      </div>
+      <div class="model-grid" id="aiModeGroup">
+        <label class="model-option">
+          <input type="radio" name="aiMode" value="auto" checked>
+          <div class="model-card">
+            <div class="model-title">Auto (Recommended)</div>
+            <div class="model-desc">Local → Cloud → WebLLM</div>
+          </div>
+        </label>
+        <label class="model-option">
+          <input type="radio" name="aiMode" value="gemini-nano">
+          <div class="model-card">
+            <div class="model-title">Gemini Nano</div>
+            <div class="model-desc">Chrome Native AI</div>
+          </div>
+        </label>
+        <label class="model-option">
+          <input type="radio" name="aiMode" value="gemini-flash">
+          <div class="model-card">
+            <div class="model-title">Gemini Flash</div>
+            <div class="model-desc">Google Cloud API</div>
+          </div>
+        </label>
+        <label class="model-option">
+          <input type="radio" name="aiMode" value="webllm">
+          <div class="model-card">
+            <div class="model-title">WebLLM</div>
+            <div class="model-desc">Llama 3.2 via WebGPU</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Default Method Display (1x1) -->
+    <div class="card default-method-block">
+      <div class="current-method">
+        <div class="method-icon" id="activeMethodIcon">✨</div>
+        <div class="method-name" id="activeMethodName">Detecting...</div>
+        <div class="method-status" id="activeMethodStatus">Checking Availability</div>
+      </div>
+      <!-- Hidden status indicator used by JS logic to maintain compatibility -->
+      <div id="aiStatusIndicator" style="display:none;"></div>
+      <div id="aiStatusDetails" style="display:none;"></div>
+    </div>
+
+    <!-- Site Toggles (1x1) -->
+    <div class="card sites-block">
+      <div class="card-header">
+        <span class="icon">🌐</span>
+        <h2>Enabled Sites</h2>
+      </div>
+      <div class="toggles-list">
+        <label class="site-tile">
+          <input type="checkbox" name="enabledSites" value="chatgpt" checked>
+          <div class="site-card">
+            <span class="site-name">ChatGPT</span>
+          </div>
+        </label>
+        <label class="site-tile">
+          <input type="checkbox" name="enabledSites" value="claude" checked>
+          <div class="site-card">
+            <span class="site-name">Claude</span>
+          </div>
+        </label>
+        <label class="site-tile">
+          <input type="checkbox" name="enabledSites" value="gemini" checked>
+          <div class="site-card">
+            <span class="site-name">Gemini</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- API Key (Expanded to 2 cols) -->
+    <div class="card api-key-block">
+      <div class="card-header">
+        <span class="icon">🔑</span>
+        <h2>Google API Key</h2>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:1rem;">
+          Required for Cloud Fallback (Gemini Flash). Your key is stored locally in Chrome Sync.
+        </p>
+        <div class="input-wrapper">
+          <input type="password" id="apiKey" placeholder="AIza..." spellcheck="false">
+          <button type="button" id="toggleKeyVisibility" class="btn-mini">👁️</button>
+          <button id="saveApiKeyBtn" class="btn-primary">Save</button>
+          <button id="clearApiKeyBtn" class="btn-secondary">Clear</button>
+        </div>
+        <div id="apiKeyStatus" class="status-msg"></div>
+      </div>
+    </div>
+
+    <!-- WebLLM (Expanded to 2 cols) -->
+    <div class="card webllm-block" id="webllm-section">
+      <div class="card-header">
+        <span class="icon">📥</span>
+        <h2>WebLLM (Llama 3.2 on WebGPU)</h2>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div style="color:var(--text-secondary); font-size:0.9rem;">
+            Status: <span id="webllm-model-status" style="color: var(--text-primary); font-weight:600;">Not
+              Loaded</span>
+          </div>
+          <div>
+            <button id="btn-download-webllm" class="btn-primary" style="margin-right:0;">Download Model
+              (~600MB)</button>
+          </div>
+        </div>
+
+        <div class="progress-track" id="webllm-progress-container" style="display:none;">
+          <div class="progress-fill" id="webllm-progress-bar"></div>
+        </div>
+        <span id="webllm-progress-text"
+          style="font-size:0.8rem; color:var(--text-secondary); text-align:center; display:none; margin-top:0.5rem;"></span>
+
+        <p id="webllm-error" class="status-msg error" style="display:none;"></p>
+        <span id="webllm-status" style="display:none;"></span>
+      </div>
+    </div>
+
+    <!-- How It Works (Full Width) -->
+    <div class="card how-it-works-block">
+      <div class="card-header">
+        <span class="icon">ℹ️</span>
+        <h2>How It Works</h2>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <h4>⚡ 1. Local (Nano)</h4>
+          <p>The privacy-first choice. Runs offline in Chrome.</p>
+          <ol>
+            <li>Open <code>chrome://flags</code> (copy url)</li>
+            <li>Enable <code>Optimization Guide On Device Model</code></li>
+            <li>Enable <code>Prompt API for Gemini Nano</code></li>
+            <li>Relaunch Chrome.</li>
+            <li>Open <code>chrome://components</code> and check for updates to "Optimization Guide On Device Model".
+            </li>
+          </ol>
+        </div>
+        <div class="info-item">
+          <h4>☁️ 2. Cloud (Flash)</h4>
+          <p>Reliable fallback if your device doesn't support Nano.</p>
+          <ol>
+            <li>Get a free API Key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI
+                Studio</a>.</li>
+            <li>Paste the key in the "Google API Key" section above.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+        </div>
+        <div class="info-item">
+          <h4>🌐 3. WebLLM</h4>
+          <p>Private, powerful AI running in your browser via WebGPU.</p>
+          <ol>
+            <li>Go to the <strong>WebLLM</strong> section above.</li>
+            <li>Click <strong>Download Model</strong> (~600MB).</li>
+            <li>Wait for the progress to complete once.</li>
+          </ol>
+        </div>
+        <div class="info-item">
+          <h4>✨ Usage</h4>
+          <p>Once tailored:</p>
+          <ul>
+            <li>Open ChatGPT, Claude, or Gemini.</li>
+            <li>Look for the <strong>PromptSmith Sparkle</strong> button.</li>
+            <li>Select a persona (e.g., "Architect") to instantly refine your prompt.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer / About -->
+    <div class="footer-block">
+      <a href="https://www.samirhusain.info" target="_blank" class="dev-link">
+        <span>About the Developer</span>
+        <span style="font-size: 1.2rem;">👨‍💻</span>
+      </a>
+      <span style="color: var(--text-secondary); font-size: 0.9rem;">PromptSmith v1.1.0</span>
+    </div>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+
+</html>
