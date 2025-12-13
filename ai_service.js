@@ -23,23 +23,35 @@ let cachedSystemPrompt = null;
  * @returns {Promise<{available: boolean, status: string, reason?: string}>}
  */
 async function checkLocalAIAvailability() {
+    console.log('[AI Service] === Checking Local AI Availability ===');
+    console.log('[AI Service] self.ai exists:', !!self.ai);
+    console.log('[AI Service] self.ai.languageModel exists:', !!(self.ai && self.ai.languageModel));
+    console.log('[AI Service] LanguageModel global exists:', typeof LanguageModel !== 'undefined');
+
     try {
         // 1. Try modern `self.ai.languageModel` API
         if (self.ai && self.ai.languageModel) {
+            console.log('[AI Service] Using MODERN self.ai.languageModel API');
+            console.log('[AI Service] Calling capabilities() with BOTH outputLanguage and expectedOutputLanguages');
+
             const capabilities = await self.ai.languageModel.capabilities({
-                outputLanguage: 'en'
+                outputLanguage: 'en',
+                expectedOutputLanguages: ['en']  // Also include array form for older API versions
             });
-            console.log('[AI Service] Local AI capabilities:', capabilities);
+            console.log('[AI Service] Local AI capabilities result:', JSON.stringify(capabilities));
 
             if (capabilities.available === 'readily') {
+                console.log('[AI Service] Status: READY');
                 return { available: true, status: 'ready' };
             } else if (capabilities.available === 'after-download') {
+                console.log('[AI Service] Status: DOWNLOADABLE');
                 return {
                     available: false,
                     status: 'downloadable',
                     reason: 'Gemini Nano model needs to be downloaded.'
                 };
             } else {
+                console.log('[AI Service] Status: UNAVAILABLE - capabilities.available =', capabilities.available);
                 return {
                     available: false,
                     status: 'unavailable',
@@ -50,22 +62,33 @@ async function checkLocalAIAvailability() {
 
         // 2. Fallback to `LanguageModel` global (Origin Trial API)
         if (typeof LanguageModel !== 'undefined') {
-            // Note: passing expectedOutputLanguages is required by recent API changes
-            const availability = await LanguageModel.availability({ expectedOutputLanguages: ['en'] });
-            console.log('[AI Service] Local AI availability (Legacy):', availability);
+            console.log('[AI Service] Using LEGACY LanguageModel global API');
+            console.log('[AI Service] Calling LanguageModel.availability() with expectedOutputLanguages: ["en"] AND outputLanguage: "en"');
+
+            // Try BOTH parameter styles to ensure compatibility
+            const availability = await LanguageModel.availability({
+                expectedOutputLanguages: ['en'],
+                outputLanguage: 'en'  // Also include singular form
+            });
+            console.log('[AI Service] Local AI availability (Legacy) result:', availability);
 
             switch (availability) {
                 case 'available':
+                    console.log('[AI Service] Status: AVAILABLE');
                     return { available: true, status: 'ready' };
                 case 'downloadable':
+                    console.log('[AI Service] Status: DOWNLOADABLE');
                     return { available: false, status: 'downloadable', reason: 'Model downloadable.' };
                 case 'downloading':
+                    console.log('[AI Service] Status: DOWNLOADING');
                     return { available: false, status: 'downloading', reason: 'Model downloading.' };
                 default:
+                    console.log('[AI Service] Status: UNKNOWN -', availability);
                     return { available: false, status: 'unavailable', reason: 'Model unavailable.' };
             }
         }
 
+        console.log('[AI Service] No AI API found!');
         return {
             available: false,
             status: 'not_supported',
@@ -74,6 +97,7 @@ async function checkLocalAIAvailability() {
 
     } catch (error) {
         console.error('[AI Service] Error checking local AI:', error);
+        console.error('[AI Service] Error stack:', error.stack);
         return {
             available: false,
             status: 'error',
@@ -88,35 +112,55 @@ async function checkLocalAIAvailability() {
  * @returns {Promise<object>} - The AI session
  */
 async function getLocalAISession(systemPrompt) {
+    console.log('[AI Service] === Getting Local AI Session ===');
+    console.log('[AI Service] Current session exists:', !!localAISession);
+    console.log('[AI Service] SystemPrompt length:', systemPrompt?.length || 0);
+
     try {
         // Destroy existing session if system prompt changed
         if (localAISession && cachedSystemPrompt !== systemPrompt) {
+            console.log('[AI Service] System prompt changed, destroying old session');
             if (localAISession.destroy) localAISession.destroy();
             localAISession = null;
         }
 
         // Reuse existing session
         if (localAISession) {
+            console.log('[AI Service] Reusing existing session');
             return localAISession;
         }
 
         // Create new session
-        console.log('[AI Service] Creating new local AI session');
+        console.log('[AI Service] Creating new local AI session...');
+        console.log('[AI Service] self.ai exists:', !!self.ai);
+        console.log('[AI Service] self.ai.languageModel exists:', !!(self.ai && self.ai.languageModel));
+        console.log('[AI Service] LanguageModel global exists:', typeof LanguageModel !== 'undefined');
 
         // Try modern API
         if (self.ai && self.ai.languageModel) {
+            console.log('[AI Service] Creating session with MODERN self.ai.languageModel API');
+            console.log('[AI Service] Session params: { systemPrompt: [truncated], outputLanguage: "en", expectedOutputLanguages: ["en"] }');
+
             localAISession = await self.ai.languageModel.create({
                 systemPrompt: systemPrompt,
-                outputLanguage: 'en' // Required by Chrome AI API - singular for modern API
+                outputLanguage: 'en', // Required by Chrome AI API - singular for modern API
+                expectedOutputLanguages: ['en']  // Also include array form for compatibility
             });
+            console.log('[AI Service] Session created successfully via modern API');
         }
         // Fallback to legacy API
         else if (typeof LanguageModel !== 'undefined') {
+            console.log('[AI Service] Creating session with LEGACY LanguageModel API');
+            console.log('[AI Service] Session params: { systemPrompt: [truncated], expectedOutputLanguages: ["en"], outputLanguage: "en" }');
+
             localAISession = await LanguageModel.create({
                 systemPrompt: systemPrompt,
-                expectedOutputLanguages: ['en'] // Explicitly required
+                expectedOutputLanguages: ['en'], // Legacy param
+                outputLanguage: 'en'  // Also include modern param for compatibility
             });
+            console.log('[AI Service] Session created successfully via legacy API');
         } else {
+            console.error('[AI Service] No Local AI API found!');
             throw new Error('Local AI API not found');
         }
 
@@ -125,6 +169,9 @@ async function getLocalAISession(systemPrompt) {
 
     } catch (error) {
         console.error('[AI Service] Error creating local AI session:', error);
+        console.error('[AI Service] Error name:', error.name);
+        console.error('[AI Service] Error message:', error.message);
+        console.error('[AI Service] Error stack:', error.stack);
         throw error;
     }
 }
