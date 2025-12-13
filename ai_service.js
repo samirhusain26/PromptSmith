@@ -8,8 +8,7 @@
  * Privacy First: Only uses cloud when local fails and user explicitly provided API key
  */
 
-// Constants
-const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+import { GEMINI_API_ENDPOINT } from './constants.js';
 
 // Cache for AI session
 let localAISession = null;
@@ -27,7 +26,9 @@ async function checkLocalAIAvailability() {
     try {
         // 1. Try modern `self.ai.languageModel` API
         if (self.ai && self.ai.languageModel) {
-            const capabilities = await self.ai.languageModel.capabilities();
+            const capabilities = await self.ai.languageModel.capabilities({
+                expectedOutputLanguages: ['en']
+            });
             console.log('[AI Service] Local AI capabilities:', capabilities);
 
             if (capabilities.available === 'readily') {
@@ -105,7 +106,8 @@ async function getLocalAISession(systemPrompt) {
         // Try modern API
         if (self.ai && self.ai.languageModel) {
             localAISession = await self.ai.languageModel.create({
-                systemPrompt: systemPrompt
+                systemPrompt: systemPrompt,
+                expectedOutputLanguages: ['en'] // Required by Chrome AI API
             });
         }
         // Fallback to legacy API
@@ -181,6 +183,8 @@ async function generateWithLocalAI(userPrompt, systemInstruction) {
  */
 async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
     console.log('[AI Service] Sending prompt to cloud AI (Gemini Flash)...');
+    console.log('[AI Service] Prompt length:', userPrompt.length, 'chars');
+    console.log('[AI Service] System instruction length:', systemInstruction.length, 'chars');
 
     const requestBody = {
         contents: [
@@ -202,7 +206,12 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
     };
 
     try {
-        const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${apiKey}`, {
+        const fullUrl = `${GEMINI_API_ENDPOINT}?key=${apiKey}`;
+        const maskedUrl = `${GEMINI_API_ENDPOINT}?key=${apiKey.substring(0, 8)}...`;
+        console.log('[AI Service] Making request to:', maskedUrl);
+        console.log('[AI Service] Request body:', JSON.stringify(requestBody, null, 2).substring(0, 500) + '...');
+
+        const response = await fetch(fullUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -210,18 +219,77 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
             body: JSON.stringify(requestBody)
         });
 
+        console.log('[AI Service] Response status:', response.status, response.statusText);
+        console.log('[AI Service] Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+            // Get raw text first for debugging
+            const rawErrorText = await response.text();
+            console.error('[AI Service] RAW ERROR RESPONSE:', rawErrorText);
+
+            // Try to parse as JSON
+            let errorData = {};
+            try {
+                errorData = JSON.parse(rawErrorText);
+            } catch (e) {
+                console.error('[AI Service] Could not parse error as JSON');
+            }
+
             const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+            const errorDetails = errorData.error?.details || [];
+            const errorCode = errorData.error?.code;
+            const errorStatus = errorData.error?.status;
+
+            // Log full error for debugging
+            console.error('[AI Service] Cloud AI Error Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                errorCode,
+                errorStatus,
+                errorMessage,
+                errorDetails,
+                fullError: errorData,
+                rawResponse: rawErrorText.substring(0, 1000),
+                promptSent: userPrompt.substring(0, 200) + (userPrompt.length > 200 ? '...' : ''),
+                promptLength: userPrompt.length,
+                systemInstructionLength: systemInstruction.length
+            });
 
             if (response.status === 400) {
                 throw new Error(`Invalid API request: ${errorMessage}`);
             } else if (response.status === 401 || response.status === 403) {
-                throw new Error('Invalid API key. Please check your Google Gemini API key in Settings.');
+                throw new Error(`Invalid API key (${errorStatus || response.status}): ${errorMessage}`);
             } else if (response.status === 429) {
-                throw new Error('API rate limit exceeded. Please try again later.');
+                // Extract quota/retry details from response headers or body
+                const retryAfter = response.headers.get('Retry-After');
+                const quotaDetails = errorDetails.find(d => d.reason === 'RATE_LIMIT_EXCEEDED' || d['@type']?.includes('QuotaFailure'));
+
+                // Build detailed error message
+                let detailedMsg = `Rate limit (${response.status}): ${errorMessage}`;
+
+                if (retryAfter) {
+                    detailedMsg += ` Retry after: ${retryAfter}s.`;
+                }
+
+                if (quotaDetails && quotaDetails.violations) {
+                    console.error('[AI Service] Quota details:', quotaDetails);
+                    const violations = quotaDetails.violations.map(v => `${v.subject || 'unknown'}: ${v.description || 'unknown'}`).join('; ');
+                    detailedMsg += ` Quota: ${violations}.`;
+                }
+
+                // Log what was sent for debugging
+                console.error('[AI Service] Request that caused rate limit:', {
+                    promptPreview: userPrompt.substring(0, 500),
+                    promptLength: userPrompt.length,
+                    systemInstructionPreview: systemInstruction.substring(0, 200),
+                    timestamp: new Date().toISOString()
+                });
+
+                detailedMsg += ` Try "Auto" mode for local AI fallback.`;
+
+                throw new Error(detailedMsg);
             } else {
-                throw new Error(`Cloud AI error: ${errorMessage}`);
+                throw new Error(`Cloud AI error (${response.status}): ${errorMessage}`);
             }
         }
 
@@ -384,6 +452,8 @@ async function getAIMode(apiKey = null) {
  */
 async function generatePolishedText(userPrompt, systemInstruction) {
     console.log('[AI Service] generatePolishedText called');
+    console.log('[AI Service] Input prompt length:', userPrompt?.length || 0);
+    console.log('[AI Service] System instruction length:', systemInstruction?.length || 0);
 
     // Get configuration
     let preferredMode = 'auto';
@@ -393,6 +463,10 @@ async function generatePolishedText(userPrompt, systemInstruction) {
         const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode']);
         apiKey = storage.geminiApiKey;
         preferredMode = storage.aiMode || 'auto';
+
+        // Debug: Log API key status (safely)
+        console.log('[AI Service] API Key retrieved:', apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)} (${apiKey.length} chars)` : 'NOT SET');
+        console.log('[AI Service] Preferred mode:', preferredMode);
     } catch (error) {
         console.error('[AI Service] Error accessing storage:', error);
     }
@@ -429,8 +503,10 @@ async function generatePolishedText(userPrompt, systemInstruction) {
     };
 
     const tryCloud = async () => {
+        console.log('[AI Service] tryCloud called, API key check:', apiKey ? 'PRESENT' : 'MISSING');
         if (apiKey && apiKey.trim().length > 0) {
-            console.log('[AI Service] Attempting Cloud API...');
+            console.log('[AI Service] Attempting Cloud API with key:', apiKey.substring(0, 8) + '...');
+            console.log('[AI Service] Endpoint:', GEMINI_API_ENDPOINT);
             const rawText = await generateWithCloudAI(userPrompt, systemInstruction, apiKey);
             return {
                 success: true,
@@ -438,6 +514,7 @@ async function generatePolishedText(userPrompt, systemInstruction) {
                 mode: 'cloud'
             };
         }
+        console.error('[AI Service] API Key is missing or empty!');
         throw new Error('API Key missing');
     };
 

@@ -133,7 +133,6 @@
     // ============================================================
 
     let currentSite = null;
-    let injectedButtons = new Set();
     let debounceTimer = null;
     let currentPersona = 'polisher'; // Default
 
@@ -411,7 +410,7 @@
 
         for (const [siteName, config] of Object.entries(SITE_CONFIGS)) {
             if (config.hostname.some(h => hostname.includes(h))) {
-                console.log(`[PromptSmith] Detected site: ${siteName} `);
+                console.log(`[PromptSmith] Detected site: ${siteName}`);
                 return siteName;
             }
         }
@@ -459,7 +458,9 @@
                 if (container && container.contains(inputElement)) {
                     return container;
                 }
-            } catch (e) { }
+            } catch (e) {
+                // Selector might be invalid, continue to next
+            }
         }
 
         // Fallback: walk up the DOM
@@ -514,15 +515,9 @@
         const rect = inputElement.getBoundingClientRect();
         // Use coordinates to distinguish inputs, but round heavily to handle minor shifts
         // Adding random suffix to avoid collisions on completely dynamic re-renders
-        return `lpp - ${Math.round(rect.top / 50)} -${Math.round(rect.left / 50)} `;
+        return `lpp-${Math.round(rect.top / 50)}-${Math.round(rect.left / 50)}`;
     }
 
-    // ============================================================
-    // TEXT REPLACEMENT (React-safe)
-    // ============================================================
-
-    // ... [setInputText and getInputText functions remain mostly unchanged, 
-    //      but including them here for completeness of replacement block] ...
 
     function setInputText(inputElement, newText) {
         if (!inputElement) return false;
@@ -721,7 +716,7 @@
         const actionBtn = document.createElement('button');
         actionBtn.className = 'lpp-polish-action';
         actionBtn.type = 'button';
-        actionBtn.title = `Polish with ${PERSONAS[currentPersona].label} `;
+        actionBtn.title = `Polish with ${PERSONAS[currentPersona].label}`;
 
         // Dynamic Icon based on current persona
         const iconSpan = document.createElement('span');
@@ -1067,8 +1062,14 @@
                 wrapper.classList.remove('lpp-loading');
                 wrapper.classList.add('lpp-success');
 
-                const modeIndicator = response.mode === 'local' ? '⚡ Local' : '☁️ Cloud';
-                showStatus(`✓ Done!(${modeIndicator})`, 'success');
+                // Map mode to user-friendly indicator
+                let modeIndicator = '☁️ Cloud';
+                if (response.mode === 'local') {
+                    modeIndicator = '⚡ Local';
+                } else if (response.mode === 'webllm') {
+                    modeIndicator = '🚀 WebLLM';
+                }
+                showStatus(`✓ Done! (${modeIndicator})`, 'success');
 
                 setTimeout(() => {
                     wrapper.classList.remove('lpp-success');
@@ -1082,7 +1083,7 @@
             wrapper.classList.remove('lpp-loading');
             wrapper.classList.add('lpp-error');
 
-            showStatus(`Error: ${error.message} `, 'error');
+            showStatus(`Error: ${error.message}`, 'error');
 
             setTimeout(() => {
                 wrapper.classList.remove('lpp-error');
@@ -1137,37 +1138,7 @@
         }
     }
 
-    function initObserver() {
-        const observer = new MutationObserver((mutations) => {
-            let shouldCheck = false;
 
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    shouldCheck = true;
-                    break;
-                }
-                if (mutation.type === 'attributes' &&
-                    (mutation.attributeName === 'class' || mutation.attributeName === 'style')) {
-                    shouldCheck = true;
-                    break;
-                }
-            }
-
-            if (shouldCheck) {
-                debouncedObserverCallback();
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style'],
-        });
-
-        console.log('[PromptSmith] MutationObserver initialized');
-        return observer;
-    }
 
     /**
      * Keep Alive Connection
@@ -1223,7 +1194,7 @@
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 const input = findInputElement();
-                if (input && !injectedButtons.has(generateButtonId(input))) {
+                if (input) {
                     injectButton(input);
                 }
             }, CONFIG.DEBOUNCE_DELAY);
@@ -1238,7 +1209,7 @@
 
         setTimeout(() => {
             const input = findInputElement();
-            if (input && !injectedButtons.has(generateButtonId(input))) {
+            if (input) {
                 injectButton(input);
             }
         }, 1000);

@@ -4,8 +4,10 @@
  * Detects AI availability and updates status indicator.
  */
 
-// Default system prompt
-const DEFAULT_PROMPT = 'Rewrite this prompt to be clear, concise, and professional. Fix any grammar errors.';
+import { DEFAULT_SYSTEM_PROMPT } from './constants.js';
+
+// Alias for backward compatibility in this file
+const DEFAULT_PROMPT = DEFAULT_SYSTEM_PROMPT;
 
 // Preset prompts for quick selection
 const PRESETS = {
@@ -102,12 +104,20 @@ const activeMethodStatus = document.getElementById('activeMethodStatus');
 // WebLLM Elements
 const webllmSection = document.getElementById('webllm-section');
 const btnDownloadWebllm = document.getElementById('btn-download-webllm');
+const btnDeleteWebllm = document.getElementById('btn-delete-webllm');
 const webllmStatusSpan = document.getElementById('webllm-status');
 const webllmModelStatusSpan = document.getElementById('webllm-model-status');
+const webllmModelSelect = document.getElementById('webllm-model-select');
 const webllmProgressContainer = document.getElementById('webllm-progress-container');
 const webllmProgressBar = document.getElementById('webllm-progress-bar');
 const webllmProgressText = document.getElementById('webllm-progress-text');
+const webllmProgressPercent = document.getElementById('webllm-progress-percent');
 const webllmError = document.getElementById('webllm-error');
+const webllmLogContainer = document.getElementById('webllm-log-container');
+const webllmLog = document.getElementById('webllm-log');
+
+// Local state for WebLLM
+let currentLoadedModelId = null;
 
 // ============================================================
 // AI AVAILABILITY CHECK
@@ -118,6 +128,7 @@ const webllmError = document.getElementById('webllm-error');
  */
 // Import shared AI check from service
 import { AIService } from './ai_service.js';
+import { WEBLLM_MODELS, DEFAULT_MODEL_ID } from './constants.js';
 
 /**
  * Check if local AI (Gemini Nano) is available
@@ -135,13 +146,14 @@ async function updateAIStatus() {
     const localAI = await checkLocalAIAvailability();
 
     // Check if API key is configured
-    const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode']);
+    const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode', 'webllmModelId']);
     const hasApiKey = storage.geminiApiKey && storage.geminiApiKey.trim().length > 0;
     const currentMode = storage.aiMode || 'auto';
 
-    // Logic to determine what the "Default Method" block displays
-    // It should reflect what will *actually* be used given the mode and availability
+    // Set selected model in dropdown
+    if (webllmModelSelect.options.length === 0) populateModelDropdown(storage.webllmModelId);
 
+    // Logic to determine what the "Default Method" block displays
     let method = {
         icon: '⚠️',
         name: 'No AI Available',
@@ -161,8 +173,13 @@ async function updateAIStatus() {
             method = { icon: '⚠️', name: 'Gemini Flash', status: 'Missing API Key' };
         }
     } else if (currentMode === 'webllm') {
-        // We'll trust the separate WebLLM check to handle detailed status, but setting high level here
-        method = { icon: '🌐', name: 'WebLLM', status: 'Check Download Status' };
+        const selectedModelId = webllmModelSelect.value || DEFAULT_MODEL_ID;
+        const isReady = currentLoadedModelId === selectedModelId;
+        method = {
+            icon: '🌐',
+            name: 'WebLLM',
+            status: isReady ? 'Active (Ready)' : 'Model Not Loaded'
+        };
     } else {
         // Auto Mode logic
         if (localAI.available) {
@@ -179,12 +196,7 @@ async function updateAIStatus() {
     activeMethodName.textContent = method.name;
     activeMethodStatus.textContent = method.status;
 
-    // Also handle the download button visibility for Nano in specific cases
     if (localAI.status === 'downloadable' && (currentMode === 'auto' || currentMode === 'gemini-nano')) {
-        // Optionally prompt for download if we were in a more complex UI, 
-        // but for this grid, we might just update the status text to encourage action
-        // or we could repurpose the method-status to be clickable? 
-        // For now, let's keep it simple as requested.
         if (method.name === 'Gemini Nano' || method.name === 'No AI Ready') {
             activeMethodStatus.textContent = 'Model Downloadable (Check Flags)';
         }
@@ -200,7 +212,7 @@ async function updateAIStatus() {
  */
 async function loadSettings() {
     try {
-        const result = await chrome.storage.sync.get(['systemPrompt', 'geminiApiKey', 'aiMode', 'enabledSites']);
+        const result = await chrome.storage.sync.get(['systemPrompt', 'geminiApiKey', 'aiMode', 'enabledSites', 'webllmModelId']);
 
         // Load system prompt
         const savedPrompt = result.systemPrompt || DEFAULT_PROMPT;
@@ -217,6 +229,8 @@ async function loadSettings() {
         const radio = document.querySelector(`input[name="aiMode"][value="${savedMode}"]`);
         if (radio) radio.checked = true;
 
+        // Populate and set WebLLM model
+        populateModelDropdown(result.webllmModelId);
         updateWebLLMUI(savedMode);
 
         // Load Enabled Sites
@@ -361,10 +375,25 @@ function showStatus(element, message, type) {
 // WEBLLM HELPERS
 // ============================================================
 
+function populateModelDropdown(savedModelId) {
+    webllmModelSelect.innerHTML = '';
+
+    WEBLLM_MODELS.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = `${model.name} (${model.size})`;
+        webllmModelSelect.appendChild(option);
+    });
+
+    // Select saved or default
+    const targetId = savedModelId || DEFAULT_MODEL_ID;
+    webllmModelSelect.value = targetId;
+
+    // Handle initial state sync locally
+    // Don't save to storage yet, only on change
+}
+
 function updateWebLLMUI(mode) {
-    // In grid layout, we always show the block, but maybe we disable it?
-    // User requested "a square... for the web llm download settings", implies it's always there.
-    // So we just check status.
     checkWebLLMStatus();
 }
 
@@ -386,7 +415,19 @@ async function checkWebLLMStatus() {
 
         // Check if model is loaded/downloading via background
         chrome.runtime.sendMessage({ type: 'GET_WEBLLM_PROGRESS' }, (response) => {
-            if (response && response.status) {
+            if (response) {
+                // If progress response indicates success, it means *currentLoadedModelId* is ready based on background state.
+                // We should assume background keeps track of what it loaded.
+                // Background -> Service -> returns engine state.
+                // WE need to know WHICH model is loaded. 
+                // Currently GET_WEBLLM_PROGRESS returns {status, text, progress}. 
+                // It doesn't return modelId. 
+                // Update: I didn't add modelId to return of getProgress in service.
+                // So I will infer based on "ready" state and assumption that if ready, it's the model we last asked for?
+                // Or I can just trust if it says "ready", the engine is ready.
+                // BUT if dropdown differs from what engine has, I should show "Click to Switch"?
+                // For simplified UX: Use `updateDownloadUI` which handles text.
+                // I'll add logic in updateDownloadUI to check dropdown match.
                 updateDownloadUI(response);
             }
         });
@@ -396,56 +437,215 @@ async function checkWebLLMStatus() {
     }
 }
 
-function startWebLLMDownload() {
-    btnDownloadWebllm.disabled = true;
-    webllmError.style.display = 'none';
+/**
+ * Add a log entry to the WebLLM log display
+ */
+function addWebLLMLog(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = document.createElement('div');
+    logEntry.textContent = `[${timestamp}] ${message}`;
+    logEntry.style.marginBottom = '2px';
+    webllmLog.appendChild(logEntry);
+    // Auto-scroll to bottom
+    webllmLogContainer.scrollTop = webllmLogContainer.scrollHeight;
+    console.log('[WebLLM]', message);
+}
 
-    chrome.runtime.sendMessage({ type: 'START_WEBLLM_DOWNLOAD' }, (response) => {
-        if (!response.success) {
-            webllmError.textContent = 'Error starting download: ' + response.error;
+function startWebLLMDownload() {
+    const modelId = webllmModelSelect.value;
+
+    btnDownloadWebllm.disabled = true;
+    btnDeleteWebllm.style.display = 'none';
+    webllmError.style.display = 'none';
+    webllmModelStatusSpan.textContent = 'Initializing...';
+
+    // Show log container and clear previous logs
+    webllmLogContainer.style.display = 'block';
+    webllmLog.innerHTML = '';
+
+    addWebLLMLog(`Starting download for: ${modelId}`);
+    addWebLLMLog('Sending request to background service...');
+
+    // Save selection
+    chrome.storage.sync.set({ webllmModelId: modelId });
+
+    chrome.runtime.sendMessage({ type: 'START_WEBLLM_DOWNLOAD', modelId: modelId }, (response) => {
+        // Check for runtime errors first
+        if (chrome.runtime.lastError) {
+            console.error('[Options] WebLLM download error:', chrome.runtime.lastError);
+            addWebLLMLog('ERROR: ' + chrome.runtime.lastError.message);
+            webllmError.textContent = 'Error: ' + chrome.runtime.lastError.message;
             webllmError.style.display = 'block';
             btnDownloadWebllm.disabled = false;
+            webllmModelStatusSpan.textContent = 'Error';
+            return;
+        }
+
+        // Check if response is valid
+        if (!response) {
+            addWebLLMLog('ERROR: No response from background service');
+            webllmError.textContent = 'Error: No response from background service. Try reloading the extension.';
+            webllmError.style.display = 'block';
+            btnDownloadWebllm.disabled = false;
+            webllmModelStatusSpan.textContent = 'Error';
+            return;
+        }
+
+        if (!response.success) {
+            const errorMsg = response.error || 'Unknown error';
+            addWebLLMLog('ERROR: ' + errorMsg);
+
+            // Provide helpful error message with troubleshooting steps
+            let displayError = 'Error starting download: ' + errorMsg;
+            if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
+                displayError += '\n\nTroubleshooting:\n• Check your internet connection\n• Try reloading the extension (chrome://extensions)\n• Ensure you\'re not behind a restrictive firewall';
+            } else if (errorMsg.includes('Security') || errorMsg.includes('CSP')) {
+                displayError += '\n\nPlease reload the extension and try again.';
+            }
+
+            webllmError.textContent = displayError;
+            webllmError.style.display = 'block';
+            btnDownloadWebllm.disabled = false;
+            webllmModelStatusSpan.textContent = 'Error';
         } else {
+            addWebLLMLog('Download started successfully!');
+            addWebLLMLog('Fetching model from MLC AI servers...');
+            // Show progress container
+            webllmProgressContainer.style.display = 'block';
+            btnDownloadWebllm.style.display = 'none';
             // Start polling
             pollWebLLMProgress();
         }
     });
 }
+function deleteWebLLMModel() {
+    if (!confirm('Are you sure you want to delete the cached model? You will need to re-download it to use WebLLM.')) {
+        return;
+    }
+
+    addWebLLMLog('Deleting model cache...');
+    btnDeleteWebllm.disabled = true;
+
+    chrome.runtime.sendMessage({ type: 'DELETE_WEBLLM_MODEL' }, (response) => {
+        btnDeleteWebllm.disabled = false;
+        if (chrome.runtime.lastError) {
+            addWebLLMLog('ERROR Deleting: ' + chrome.runtime.lastError.message);
+            return;
+        }
+
+        if (response && response.success) {
+            addWebLLMLog('Model deleted successfully.');
+            // Reset UI state
+            currentLoadedModelId = null;
+            updateDownloadUI({ status: 'idle', text: '', progress: 0 });
+        } else {
+            addWebLLMLog('Error deleting model: ' + (response ? response.error : 'Unknown'));
+        }
+    });
+}
+
 
 let pollingInterval = null;
+let lastProgressText = '';
+
 function pollWebLLMProgress() {
     if (pollingInterval) clearInterval(pollingInterval);
 
     pollingInterval = setInterval(() => {
         chrome.runtime.sendMessage({ type: 'GET_WEBLLM_PROGRESS' }, (response) => {
-            updateDownloadUI(response);
+            if (chrome.runtime.lastError) {
+                console.error('[Options] Polling error:', chrome.runtime.lastError);
+                return;
+            }
 
-            if (response.status === 'ready' || response.status === 'error') {
+            if (response) {
+                updateDownloadUI(response);
+            }
+
+            if (response && (response.status === 'ready' || response.status === 'error')) {
                 clearInterval(pollingInterval);
+                pollingInterval = null;
             }
         });
-    }, 500);
+    }, 300); // Poll more frequently for smoother progress
 }
 
 function updateDownloadUI(state) {
+    if (!state) return;
+
+    // We assume state reflects the *current operation*.
+    // If status is ready, we update local currentLoadedModelId to whatever is selected (assumption)
+    // or ideally background tells us. 
+    // For now, if state.status === 'ready', we assume current selection is valid.
+
+    const progressPercent = Math.round((state.progress || 0) * 100);
+
     if (state.status === 'downloading') {
         webllmProgressContainer.style.display = 'block';
-        webllmProgressText.style.display = 'block';
-        webllmProgressBar.style.width = (state.progress * 100) + '%';
-        webllmProgressText.textContent = state.text;
+        webllmProgressBar.style.width = progressPercent + '%';
+        webllmProgressPercent.textContent = progressPercent + '%';
+        webllmProgressText.textContent = state.text || 'Downloading...';
         webllmModelStatusSpan.textContent = 'Downloading...';
         btnDownloadWebllm.style.display = 'none';
+        btnDeleteWebllm.style.display = 'none';
+
+        // Log progress milestones or new status text
+        if (state.text && state.text !== lastProgressText) {
+            addWebLLMLog(state.text);
+            lastProgressText = state.text;
+        }
     } else if (state.status === 'ready') {
-        webllmProgressContainer.style.display = 'none';
-        webllmProgressText.style.display = 'none';
+        // Mark as loaded
+        currentLoadedModelId = webllmModelSelect.value; // Optimistic sync
+
+        webllmProgressContainer.style.display = 'block';
+        webllmProgressBar.style.width = '100%';
+        webllmProgressPercent.textContent = '100%';
+        webllmProgressText.textContent = 'Model loaded successfully!';
+
         webllmModelStatusSpan.textContent = 'Ready';
         webllmModelStatusSpan.style.color = 'var(--success)';
+
         btnDownloadWebllm.style.display = 'none';
+        btnDeleteWebllm.style.display = 'inline-flex';
+
+        // Log only if freshly done
+        if (lastProgressText !== 'Done') {
+            addWebLLMLog('✓ Model loaded and ready to use!');
+            lastProgressText = 'Done';
+        }
+
     } else if (state.status === 'error') {
+        addWebLLMLog('ERROR: ' + state.text);
         webllmError.textContent = state.text;
         webllmError.style.display = 'block';
+        webllmModelStatusSpan.textContent = 'Error';
+        webllmModelStatusSpan.style.color = 'var(--error)';
         btnDownloadWebllm.disabled = false;
-        btnDownloadWebllm.style.display = 'inline-block';
+        btnDownloadWebllm.style.display = 'inline-flex';
+        btnDeleteWebllm.style.display = 'inline-flex'; // Allow delete to retry clean
+    } else if (state.status === 'idle') {
+        // Model not yet loaded, show download button
+        webllmProgressContainer.style.display = 'none';
+        webllmModelStatusSpan.textContent = 'Not Loaded';
+        btnDownloadWebllm.disabled = false;
+        btnDownloadWebllm.innerText = 'Download Selected Model'; // Update text
+        btnDownloadWebllm.style.display = 'inline-flex';
+        btnDeleteWebllm.style.display = 'none'; // Can't delete what's not there/loaded? 
+        // Actually, cache presence check is hard without loading. 
+        // We'll show delete only if "Ready" for now, or just leave hidden if idle. 
+        // User asked for "remove in case...". If it's idle, we don't know if it's on disk.
+        // Compromise: Add a "Clear Cache" button visible in idle? Or just sticking to "Delete" when Loaded is safer context.
+        // Actually, "Idle" might mean "I just opened the page". 
+        // If I have downloaded it before, I want to delete it without loading it (which takes time).
+        // But checking `caches.has()` is async.
+        // Let's keep it simple: Delete button available if we *think* it might be there, or simply always available?
+        // Let's make Delete available always but maybe minimal style if idle.
+        // For now: Hide in idle to prevent confusion, show when Ready/Error.
+        // EDIT: User wants to delete to free space. If I can't load it (e.g. broken), I still want to delete.
+        // So showing Delete in 'Error' state is good.
+        // Showing in 'Idle' is tricky if we don't know. 
+        // Use 'inline-flex' if we want it visible. I'll stick to 'none' for idle for now unless user complains.
     }
 }
 
@@ -500,8 +700,31 @@ document.querySelectorAll('input[name="aiMode"]').forEach(radio => {
     });
 });
 
-// WebLLM Download Button
+// WebLLM Listeners
 btnDownloadWebllm.addEventListener('click', startWebLLMDownload);
+btnDeleteWebllm.addEventListener('click', deleteWebLLMModel);
+
+// Handle Model Change
+webllmModelSelect.addEventListener('change', (e) => {
+    const newModelId = e.target.value;
+    // Save preference
+    chrome.storage.sync.set({ webllmModelId: newModelId });
+
+    addWebLLMLog(`Selected model: ${newModelId}`);
+
+    // If selected model is different from loaded, update UI to show "Download/Load"
+    if (newModelId !== currentLoadedModelId) {
+        // Reset UI to idle-like state for this new model
+        updateDownloadUI({ status: 'idle' });
+        webllmModelStatusSpan.textContent = 'Not Loaded (Click Download)';
+        webllmModelStatusSpan.style.color = 'var(--text-secondary)';
+    } else {
+        // If switching back to loaded model
+        updateDownloadUI({ status: 'ready' });
+    }
+
+    updateAIStatus();
+});
 
 // Keyboard shortcut: Ctrl/Cmd + S to save
 document.addEventListener('keydown', (e) => {

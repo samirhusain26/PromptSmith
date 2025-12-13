@@ -4,11 +4,6 @@
 
 A Chrome Extension that intelligently polishes your prompts before sending them to any major AI chat interface. PromptSmith uses a **3-tier hybrid AI system** that prioritizes local processing for privacy while falling back to cloud services when needed.
 
-![Chrome](https://img.shields.io/badge/Chrome-MV3-blue)
-![AI](https://img.shields.io/badge/AI-Gemini%20Nano%20%7C%20Flash%20%7C%20WebLLM-purple)
-![Privacy](https://img.shields.io/badge/Privacy-Local%20First-green)
-![Version](https://img.shields.io/badge/Version-1.1.0-orange)
-
 ---
 
 ## Table of Contents
@@ -78,9 +73,19 @@ Force a specific AI engine:
 
 | Mode | Engine | Description | Requirements |
 |------|--------|-------------|--------------|
-| **Gemini Nano** | Chrome Native | Fastest, most private | Chrome 128+, enabled flags |
-| **Gemini Flash** | Cloud API | Most capable, reliable | Google API key |
-| **WebLLM** | WebGPU (Llama 3.2) | Portable local AI | WebGPU-compatible GPU, ~600MB download |
+| **Gemini Nano** | Chrome Native | On-device, private | Chrome 128+, enabled flags |
+| **Gemini Flash** | Cloud API | Fastest, most capable | Google API key |
+| **WebLLM** | WebGPU (Llama 3.2 1B) | Portable local AI | WebGPU-compatible GPU, ~870MB download |
+
+### ⚡ Performance Comparison
+
+**Speed Rankings** (fastest to slowest):
+1. **Gemini Flash (API)** - Cloud processing, typically 1-3 seconds
+2. **Gemini Nano** - On-device, typically 3-8 seconds
+3. **WebLLM** - On-device, typically 5-15 seconds (varies by model and GPU)
+
+> [!TIP]
+> For the fastest experience, use **Gemini Flash** with an API key. On-device models (Gemini Nano and WebLLM) prioritize privacy over speed and run entirely locally without network requests.
 
 ---
 
@@ -196,7 +201,13 @@ The button adapts its styling to look native on each platform:
 2. Requires Chrome 113+ with WebGPU support
 3. Open PromptSmith Settings
 4. Set AI Processing Mode to "WebLLM"
-5. Click **Download Model** (~600MB, Llama 3.2)
+5. Select a model (default: Llama 3.2 1B, ~870MB)
+6. Click **Download Model**
+
+**Available Models:**
+- Llama 3.2 1B (Fastest) - ~870MB
+- Llama 3.2 3B (Balanced) - ~2.3GB
+- Gemma 2 2B (Google) - ~1.4GB
 
 ---
 
@@ -341,8 +352,9 @@ PromptSmith/
 ### For WebLLM (Local)
 
 - WebGPU-compatible GPU (most modern GPUs)
-- ~600MB disk space for Llama 3.2 model
+- ~870MB - 2.3GB disk space (depending on model choice)
 - Chrome 113+ or any WebGPU-enabled browser
+- Note: Processing speeds vary by GPU and model size
 
 ### For Gemini Flash (Cloud)
 

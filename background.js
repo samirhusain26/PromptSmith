@@ -12,14 +12,12 @@
 import * as webllm from './webllm_lib.js';
 import { WebLLMService } from './webllm_service.js';
 import { AIService } from './ai_service.js';
+import { DEFAULT_SYSTEM_PROMPT } from './constants.js';
 
 // Attach services to global scope for debugging/interaction if needed
 self.webllm = webllm;
 self.WebLLMService = WebLLMService;
 self.AIService = AIService;
-
-// Default system prompt
-const DEFAULT_SYSTEM_PROMPT = 'Rewrite this prompt to be clear, concise, and professional. Fix any grammar errors.';
 
 // ============================================================
 // INSTALLATION & LIFECYCLE
@@ -60,7 +58,7 @@ chrome.runtime.onConnect.addListener((port) => {
     });
 
     port.onDisconnect.addListener(() => {
-      // Port closed
+      console.log('[PromptSmith] Keep-alive port disconnected');
     });
   }
 });
@@ -94,7 +92,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Handle WebLLM Download
   if (message.type === 'START_WEBLLM_DOWNLOAD') {
-    handleWebLLMDownload(sendResponse);
+    handleWebLLMDownload(message.modelId, sendResponse);
+    return true;
+  }
+
+  // Handle WebLLM Usage/Model Deletion
+  if (message.type === 'DELETE_WEBLLM_MODEL') {
+    handleDeleteWebLLMModel(sendResponse);
     return true;
   }
 
@@ -112,17 +116,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 /**
  * Handle WebLLM model download trigger
  */
-async function handleWebLLMDownload(sendResponse) {
+async function handleWebLLMDownload(modelId, sendResponse) {
   if (self.WebLLMService) {
     try {
-      // Start download (async)
-      self.WebLLMService.loadModel();
-      sendResponse({ success: true, status: 'started' });
+      // Start download (async) - await it so errors are caught
+      await self.WebLLMService.loadModel(modelId);
+      sendResponse({ success: true, status: 'completed' });
     } catch (e) {
       sendResponse({ success: false, error: e.message });
     }
   } else {
     sendResponse({ success: false, error: 'WebLLM Service not available' });
+  }
+}
+
+/**
+ * Handle WebLLM model deletion
+ */
+async function handleDeleteWebLLMModel(sendResponse) {
+  if (self.WebLLMService && self.WebLLMService.deleteModel) {
+    try {
+      await self.WebLLMService.deleteModel();
+      sendResponse({ success: true, status: 'deleted' });
+    } catch (e) {
+      sendResponse({ success: false, error: e.message });
+    }
+  } else {
+    sendResponse({ success: false, error: 'Service not available' });
   }
 }
 
