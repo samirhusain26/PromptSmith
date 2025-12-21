@@ -5,87 +5,16 @@
  */
 
 import { DEFAULT_SYSTEM_PROMPT } from './constants.js';
+import { PRESETS } from './prompts.js';
 
 // Alias for backward compatibility in this file
 const DEFAULT_PROMPT = DEFAULT_SYSTEM_PROMPT;
-
-// Preset prompts for quick selection
-const PRESETS = {
-    architect: `You are an expert Prompt Engineer specializing in "Tree of Thoughts" (ToT) and advanced reasoning topologies.
-Your Goal: Rewrite the user's prompt to force a Large Language Model (LLM) to use "System 2" thinking. The new prompt must require the model to simulate multiple experts, explore multiple reasoning branches, and evaluate its own steps before concluding.
-
-Instructions:
-1. Analyze the user's original request.
-2. Rewrite it into a "Multi-Expert ToT Simulation" format.
-3. Structure the new prompt to include:
-   - A persona assignment: "Imagine three different experts are answering this question."
-   - A process instruction: "All experts will write down 1 step of their thinking, then share it with the group."
-   - An error correction mechanism: "If any expert realizes they're wrong, they leave."
-   - The original query clearly stated at the end.
-4. Do not answer the user's prompt yourself. Only output the *rewritten prompt* ready for ingestion.`,
-
-    agent: `You are an expert in Agentic AI patterns (ReAct, Reflexion).
-Your Goal: Rewrite the user's prompt to enforce a strict "Action-Observation-Reflection" loop. This is critical for tasks requiring research, facts, or tool usage to prevent hallucinations.
-
-Instructions:
-1. Analyze the user's request.
-2. Rewrite the prompt to demand the following structure from the model:
-   - Thought: Reason about the current state.
-   - Action: Explicitly state what information needs to be retrieved/verified.
-   - Observation: Analyze the findings.
-   - Reflection: Critique the previous steps for errors or gaps.
-3. Explicitly instruct the model to "ground its reasoning in observed reality" and "cite sources."
-4. Do not execute the prompt. Only provide the *polished, agentic prompt*.`,
-
-    compiler: `You are a DSPy Optimization Specialist.
-Your Goal: Treat the user's prompt not as conversation, but as a software program. Strip away conversational fluff and restructure it into a declarative "Signature."
-
-Instructions:
-1. Identify the core "Input" (what the user provides) and "Output" (what they want).
-2. Remove polite phrases ("Please," "I would like") and vague language.
-3. Format the new prompt using a pseudo-code/DSPy style:
-   - Context: [Background info]
-   - Task: [Precise verb]
-   - Constraints: [Strict rules, e.g., "Max 50 words"]
-   - Metric: [How success is measured, e.g., "Exact Match"]
-4. Ensure the instructions are modular and repeatable.`,
-
-    structurer: `You are a Syntax Enforcement Engineer specializing in LLM outputs.
-Your Goal: Rewrite the user's prompt to guarantee the output is valid, parsable code (XML or JSON).
-
-Instructions:
-1. Determine if the user needs a document structure (XML) or a data object (JSON).
-   - If ambiguous, default to XML for content generation and JSON for data extraction.
-2. If XML: Wrap instructions in <instruction> tags and require the output in <answer> tags.
-3. If JSON: Define a strict JSON Schema (keys and value types) and instruct the model to "adhere strictly to this schema."
-4. Add a "negative constraint": "Do not include markdown formatting or conversational filler outside the tags."`,
-
-    primer: `You are a Contextual Scaling Strategist.
-Your Goal: Rewrite the prompt to utilize "In-Context Learning" (ICL). You want to "prime" the model to behave in a specific way by establishing a pattern before the actual request.
-
-Instructions:
-1. Analyze the user's intent.
-2. Create a "Template" structure for the prompt.
-3. Add placeholders for "Few-Shot Examples" (e.g., "[Insert Example 1 Here]").
-4. Add a "Pre-fill" instruction at the very end to force the model's starting sequence (e.g., "Assistant: <analysis>").
-5. Explain to the user (in a brief comment) that they should fill in the example placeholders for maximum effect.`,
-
-    polisher: `You are a Professional Editor for technical documentation.
-Your Goal: Clean up the user's prompt to be grammatically perfect, concise, and highly legible, without changing the underlying logic or adding complex frameworks.
-
-Instructions:
-1. Fix all spelling and grammar errors.
-2. Improve sentence structure for clarity and impact.
-3. Use Markdown formatting (bolding, bullet points) to make the instructions scannable.
-4. Separate the "Context" from the "Instruction" visually.
-5. Do not add new personas or complex constraints—just make the existing intent shine.`
-};
 
 // DOM Elements
 const systemPromptTextarea = document.getElementById('systemPrompt');
 const charCountSpan = document.getElementById('charCount');
 const saveBtn = document.getElementById('saveBtn');
-const resetBtn = document.getElementById('resetBtn');
+const resetPersonaBtn = document.getElementById('resetPersonaBtn');
 const statusDiv = document.getElementById('status');
 const presetChips = document.querySelectorAll('.preset-chip');
 
@@ -101,24 +30,6 @@ const activeMethodIcon = document.getElementById('activeMethodIcon');
 const activeMethodName = document.getElementById('activeMethodName');
 const activeMethodStatus = document.getElementById('activeMethodStatus');
 
-// WebLLM Elements
-const webllmSection = document.getElementById('webllm-section');
-const btnDownloadWebllm = document.getElementById('btn-download-webllm');
-const btnDeleteWebllm = document.getElementById('btn-delete-webllm');
-const webllmStatusSpan = document.getElementById('webllm-status');
-const webllmModelStatusSpan = document.getElementById('webllm-model-status');
-const webllmModelSelect = document.getElementById('webllm-model-select');
-const webllmProgressContainer = document.getElementById('webllm-progress-container');
-const webllmProgressBar = document.getElementById('webllm-progress-bar');
-const webllmProgressText = document.getElementById('webllm-progress-text');
-const webllmProgressPercent = document.getElementById('webllm-progress-percent');
-const webllmError = document.getElementById('webllm-error');
-const webllmLogContainer = document.getElementById('webllm-log-container');
-const webllmLog = document.getElementById('webllm-log');
-
-// Local state for WebLLM
-let currentLoadedModelId = null;
-
 // ============================================================
 // AI AVAILABILITY CHECK
 // ============================================================
@@ -128,30 +39,21 @@ let currentLoadedModelId = null;
  */
 // Import shared AI check from service
 import { AIService } from './ai_service.js';
-import { WEBLLM_MODELS, DEFAULT_MODEL_ID } from './constants.js';
 
-/**
- * Check if local AI (Gemini Nano) is available
- * Wraps the shared service call
- */
-async function checkLocalAIAvailability() {
-    return await AIService.checkLocalAIAvailability();
-}
+// Remove wrapper function checkLocalAIAvailability
+
 
 /**
  * Update the AI status display in the UI
  */
 async function updateAIStatus() {
     // Check local AI availability
-    const localAI = await checkLocalAIAvailability();
+    const localAI = await AIService.checkLocalAIAvailability();
 
     // Check if API key is configured
-    const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode', 'webllmModelId']);
+    const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode']);
     const hasApiKey = storage.geminiApiKey && storage.geminiApiKey.trim().length > 0;
-    const currentMode = storage.aiMode || 'auto';
-
-    // Set selected model in dropdown
-    if (webllmModelSelect.options.length === 0) populateModelDropdown(storage.webllmModelId);
+    const currentMode = storage.aiMode || 'hybrid';
 
     // Logic to determine what the "Default Method" block displays
     let method = {
@@ -160,45 +62,37 @@ async function updateAIStatus() {
         status: 'Please configure settings'
     };
 
-    if (currentMode === 'gemini-nano') {
+    if (currentMode === 'local') {
         if (localAI.available) {
-            method = { icon: '⚡', name: 'Gemini Nano', status: 'Active (On-Device)' };
+            method = { icon: '⚡', name: 'Local Only', status: 'Gemini Nano Active' };
         } else {
-            method = { icon: '⚠️', name: 'Gemini Nano', status: 'Unavailable / Download Required' };
+            method = { icon: '❌', name: 'Local Only', status: 'Nano Unavailable' };
         }
-    } else if (currentMode === 'gemini-flash') {
+    } else if (currentMode === 'cloud') {
         if (hasApiKey) {
-            method = { icon: '☁️', name: 'Gemini Flash', status: 'Active (Cloud API)' };
+            method = { icon: '☁️', name: 'Cloud Only', status: 'Gemini Flash Active' };
         } else {
-            method = { icon: '⚠️', name: 'Gemini Flash', status: 'Missing API Key' };
+            method = { icon: '❌', name: 'Cloud Only', status: 'API Key Required' };
         }
-    } else if (currentMode === 'webllm') {
-        const selectedModelId = webllmModelSelect.value || DEFAULT_MODEL_ID;
-        const isReady = currentLoadedModelId === selectedModelId;
-        method = {
-            icon: '🌐',
-            name: 'WebLLM',
-            status: isReady ? 'Active (Ready)' : 'Model Not Loaded'
-        };
     } else {
-        // Auto Mode logic
-        if (localAI.available) {
-            method = { icon: '⚡', name: 'Gemini Nano', status: 'Auto: Preferred' };
-        } else if (hasApiKey) {
-            method = { icon: '☁️', name: 'Gemini Flash', status: 'Auto: Fallback Active' };
+        // Hybrid Mode logic
+        if (hasApiKey) {
+            method = { icon: '☁️', name: 'Hybrid', status: 'Cloud Primary' };
+        } else if (localAI.available) {
+            method = { icon: '⚡', name: 'Hybrid', status: 'Local Fallback Active' };
         } else {
-            method = { icon: '⚠️', name: 'No AI Ready', status: 'Auto: No Valid Source' };
+            method = { icon: '⚠️', name: 'Hybrid', status: 'No AI Ready' };
         }
     }
 
-    // Update UI
-    activeMethodIcon.textContent = method.icon;
-    activeMethodName.textContent = method.name;
-    activeMethodStatus.textContent = method.status;
+    // Update UI (with null checks since activeMethodIcon may have been removed)
+    if (activeMethodIcon) activeMethodIcon.textContent = method.icon;
+    if (activeMethodName) activeMethodName.textContent = method.name;
+    if (activeMethodStatus) activeMethodStatus.textContent = method.status;
 
-    if (localAI.status === 'downloadable' && (currentMode === 'auto' || currentMode === 'gemini-nano')) {
-        if (method.name === 'Gemini Nano' || method.name === 'No AI Ready') {
-            activeMethodStatus.textContent = 'Model Downloadable (Check Flags)';
+    if (localAI.status === 'downloadable' && (currentMode === 'hybrid' || currentMode === 'local')) {
+        if (method.name === 'Local Only' || method.name === 'Hybrid') {
+            if (activeMethodStatus) activeMethodStatus.textContent = 'Model Downloadable';
         }
     }
 }
@@ -212,26 +106,39 @@ async function updateAIStatus() {
  */
 async function loadSettings() {
     try {
-        const result = await chrome.storage.sync.get(['systemPrompt', 'geminiApiKey', 'aiMode', 'enabledSites', 'webllmModelId']);
+        const result = await chrome.storage.sync.get(['systemPrompt', 'geminiApiKey', 'aiMode', 'enabledSites', 'activePersona', 'customPersonaPrompts']);
 
-        // Load system prompt
-        const savedPrompt = result.systemPrompt || DEFAULT_PROMPT;
+        // Store activePersona globally for reset functionality
+        const activePersona = result.activePersona || 'polisher';
+        window.currentActivePersona = activePersona;
+
+        // Store custom prompts globally
+        window.customPersonaPrompts = result.customPersonaPrompts || {};
+
+        // Load system prompt - check for custom prompt first, then fall back to preset/default
+        let savedPrompt;
+        if (window.customPersonaPrompts[activePersona]) {
+            savedPrompt = window.customPersonaPrompts[activePersona];
+        } else if (PRESETS[activePersona]) {
+            savedPrompt = PRESETS[activePersona];
+        } else {
+            savedPrompt = result.systemPrompt || DEFAULT_PROMPT;
+        }
+
         systemPromptTextarea.value = savedPrompt;
         updateCharCount();
+
+        // Highlight active preset chip based on activePersona
+        updatePresetChipHighlight(activePersona);
 
         // Load API key (show masked)
         if (result.geminiApiKey && result.geminiApiKey.length > 0) {
             apiKeyInput.value = result.geminiApiKey;
         }
 
-        // Load AI Mode
-        const savedMode = result.aiMode || 'auto';
-        const radio = document.querySelector(`input[name="aiMode"][value="${savedMode}"]`);
-        if (radio) radio.checked = true;
-
-        // Populate and set WebLLM model
-        populateModelDropdown(result.webllmModelId);
-        updateWebLLMUI(savedMode);
+        // Load AI Mode - update toggle UI
+        const savedMode = result.aiMode || 'hybrid';
+        updateToggleUI(savedMode);
 
         // Load Enabled Sites
         const enabledSites = result.enabledSites || { chatgpt: true, claude: true, gemini: true };
@@ -249,6 +156,7 @@ async function loadSettings() {
 
 /**
  * Save system prompt to Chrome storage
+ * Saves the custom prompt for the currently active persona
  */
 async function saveSettings() {
     const systemPrompt = systemPromptTextarea.value.trim();
@@ -259,9 +167,25 @@ async function saveSettings() {
     }
 
     try {
-        await chrome.storage.sync.set({ systemPrompt });
-        showStatus(statusDiv, '✓ Settings saved successfully!', 'show');
-        console.log('[Options] Settings saved');
+        const activePersona = window.currentActivePersona || 'polisher';
+
+        // Update the custom prompts object for the current persona
+        const customPersonaPrompts = window.customPersonaPrompts || {};
+        customPersonaPrompts[activePersona] = systemPrompt;
+        window.customPersonaPrompts = customPersonaPrompts;
+
+        // Save the custom prompt to storage, keeping the current persona active
+        await chrome.storage.sync.set({
+            activePersona,
+            customPersonaPrompts
+        });
+
+        // Keep the persona chip highlighted
+        updatePresetChipHighlight(activePersona);
+
+        const personaLabel = activePersona.charAt(0).toUpperCase() + activePersona.slice(1);
+        showStatus(statusDiv, `✓ Custom ${personaLabel} prompt saved!`, 'show');
+        console.log(`[Options] Custom prompt saved for persona: ${activePersona}`);
     } catch (error) {
         console.error('[Options] Error saving settings:', error);
         showStatus(statusDiv, 'Error saving settings.', 'error');
@@ -317,24 +241,105 @@ async function clearApiKey() {
 }
 
 /**
- * Reset to default prompt
+ * Reset to the currently active persona's default prompt
+ * Clears any custom prompt for this persona and restores the default
  */
-function resetToDefault() {
-    systemPromptTextarea.value = DEFAULT_PROMPT;
+async function resetToPersonaDefault() {
+    // Get the current active persona
+    const activePersona = window.currentActivePersona || 'polisher';
+
+    // Get the default preset for this persona
+    const preset = PRESETS[activePersona];
+    const defaultPrompt = preset || DEFAULT_PROMPT;
+
+    // Update the textarea with the persona's default prompt
+    systemPromptTextarea.value = defaultPrompt;
     updateCharCount();
-    showStatus(statusDiv, 'Reset to default prompt', 'show');
+
+    // Remove custom prompt for this persona from the storage
+    const customPersonaPrompts = window.customPersonaPrompts || {};
+    delete customPersonaPrompts[activePersona];
+    window.customPersonaPrompts = customPersonaPrompts;
+
+    // Save the reset state
+    await chrome.storage.sync.set({
+        systemPrompt: defaultPrompt,
+        activePersona: activePersona,
+        customPersonaPrompts
+    });
+
+    // Keep the persona chip highlighted
+    updatePresetChipHighlight(activePersona);
+
+    const personaLabel = activePersona.charAt(0).toUpperCase() + activePersona.slice(1);
+    showStatus(statusDiv, `Reset to ${personaLabel} default`, 'show');
 }
 
 /**
  * Apply a preset prompt
+ * Loads the custom prompt if one exists, otherwise loads the default preset
  */
-function applyPreset(presetName) {
-    const preset = PRESETS[presetName];
-    if (preset) {
-        systemPromptTextarea.value = preset;
+async function applyPreset(presetName) {
+    const defaultPreset = PRESETS[presetName];
+    if (defaultPreset) {
+        // Check if there's a custom prompt saved for this persona
+        const customPersonaPrompts = window.customPersonaPrompts || {};
+        let promptToApply = customPersonaPrompts[presetName];
+
+        // For 'custom' persona, show help text if no custom prompt saved
+        if (!promptToApply) {
+            if (presetName === 'custom') {
+                promptToApply = `[Enter your custom system prompt here]
+
+Tips:
+- Define the AI's role and task clearly
+- Add constraints (what NOT to do)
+- Specify the output format you want`;
+            } else {
+                promptToApply = defaultPreset;
+            }
+        }
+
+        systemPromptTextarea.value = promptToApply;
         updateCharCount();
-        showStatus(statusDiv, `Applied "${presetName}" preset`, 'show');
+
+        // Update the active persona
+        window.currentActivePersona = presetName;
+
+        // Save both systemPrompt and activePersona to storage
+        await chrome.storage.sync.set({
+            activePersona: presetName
+        });
+
+        updatePresetChipHighlight(presetName);
+
+        // Show different message if using custom vs default
+        if (customPersonaPrompts[presetName]) {
+            showStatus(statusDiv, `Loaded custom "${presetName}" prompt`, 'show');
+        } else {
+            showStatus(statusDiv, `Applied "${presetName}" preset`, 'show');
+        }
     }
+}
+
+/**
+ * Update visual highlight on preset chips based on active persona
+ * With per-persona storage, activePersona is always a real persona name (never 'custom')
+ */
+function updatePresetChipHighlight(activePersona) {
+    // Store the active persona for reset functionality
+    if (activePersona) {
+        window.currentActivePersona = activePersona;
+    }
+
+    presetChips.forEach(chip => {
+        const presetName = chip.dataset.preset;
+        if (presetName === activePersona) {
+            chip.classList.add('active');
+        } else {
+            chip.classList.remove('active');
+        }
+    });
 }
 
 /**
@@ -372,290 +377,12 @@ function showStatus(element, message, type) {
 }
 
 // ============================================================
-// WEBLLM HELPERS
-// ============================================================
-
-function populateModelDropdown(savedModelId) {
-    webllmModelSelect.innerHTML = '';
-
-    WEBLLM_MODELS.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.id;
-        option.textContent = `${model.name} (${model.size})`;
-        webllmModelSelect.appendChild(option);
-    });
-
-    // Select saved or default
-    const targetId = savedModelId || DEFAULT_MODEL_ID;
-    webllmModelSelect.value = targetId;
-
-    // Handle initial state sync locally
-    // Don't save to storage yet, only on change
-}
-
-function updateWebLLMUI(mode) {
-    checkWebLLMStatus();
-}
-
-async function checkWebLLMStatus() {
-    // Check GPU support
-    if (!navigator.gpu) {
-        webllmModelStatusSpan.textContent = 'Not Supported';
-        webllmModelStatusSpan.style.color = 'var(--error)';
-        btnDownloadWebllm.disabled = true;
-        return;
-    }
-
-    try {
-        const adapter = await navigator.gpu.requestAdapter();
-        if (!adapter) {
-            webllmModelStatusSpan.textContent = 'No WebGPU Adapter';
-            webllmModelStatusSpan.style.color = 'var(--error)';
-        }
-
-        // Check if model is loaded/downloading via background
-        chrome.runtime.sendMessage({ type: 'GET_WEBLLM_PROGRESS' }, (response) => {
-            if (response) {
-                // If progress response indicates success, it means *currentLoadedModelId* is ready based on background state.
-                // We should assume background keeps track of what it loaded.
-                // Background -> Service -> returns engine state.
-                // WE need to know WHICH model is loaded. 
-                // Currently GET_WEBLLM_PROGRESS returns {status, text, progress}. 
-                // It doesn't return modelId. 
-                // Update: I didn't add modelId to return of getProgress in service.
-                // So I will infer based on "ready" state and assumption that if ready, it's the model we last asked for?
-                // Or I can just trust if it says "ready", the engine is ready.
-                // BUT if dropdown differs from what engine has, I should show "Click to Switch"?
-                // For simplified UX: Use `updateDownloadUI` which handles text.
-                // I'll add logic in updateDownloadUI to check dropdown match.
-                updateDownloadUI(response);
-            }
-        });
-
-    } catch (e) {
-        webllmModelStatusSpan.textContent = 'Error Checking WebGPU';
-    }
-}
-
-/**
- * Add a log entry to the WebLLM log display
- */
-function addWebLLMLog(message) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = document.createElement('div');
-    logEntry.textContent = `[${timestamp}] ${message}`;
-    logEntry.style.marginBottom = '2px';
-    webllmLog.appendChild(logEntry);
-    // Auto-scroll to bottom
-    webllmLogContainer.scrollTop = webllmLogContainer.scrollHeight;
-    console.log('[WebLLM]', message);
-}
-
-function startWebLLMDownload() {
-    const modelId = webllmModelSelect.value;
-
-    btnDownloadWebllm.disabled = true;
-    btnDeleteWebllm.style.display = 'none';
-    webllmError.style.display = 'none';
-    webllmModelStatusSpan.textContent = 'Initializing...';
-
-    // Show log container and clear previous logs
-    webllmLogContainer.style.display = 'block';
-    webllmLog.innerHTML = '';
-
-    addWebLLMLog(`Starting download for: ${modelId}`);
-    addWebLLMLog('Sending request to background service...');
-
-    // Save selection
-    chrome.storage.sync.set({ webllmModelId: modelId });
-
-    chrome.runtime.sendMessage({ type: 'START_WEBLLM_DOWNLOAD', modelId: modelId }, (response) => {
-        // Check for runtime errors first
-        if (chrome.runtime.lastError) {
-            console.error('[Options] WebLLM download error:', chrome.runtime.lastError);
-            addWebLLMLog('ERROR: ' + chrome.runtime.lastError.message);
-            webllmError.textContent = 'Error: ' + chrome.runtime.lastError.message;
-            webllmError.style.display = 'block';
-            btnDownloadWebllm.disabled = false;
-            webllmModelStatusSpan.textContent = 'Error';
-            return;
-        }
-
-        // Check if response is valid
-        if (!response) {
-            addWebLLMLog('ERROR: No response from background service');
-            webllmError.textContent = 'Error: No response from background service. Try reloading the extension.';
-            webllmError.style.display = 'block';
-            btnDownloadWebllm.disabled = false;
-            webllmModelStatusSpan.textContent = 'Error';
-            return;
-        }
-
-        if (!response.success) {
-            const errorMsg = response.error || 'Unknown error';
-            addWebLLMLog('ERROR: ' + errorMsg);
-
-            // Provide helpful error message with troubleshooting steps
-            let displayError = 'Error starting download: ' + errorMsg;
-            if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
-                displayError += '\n\nTroubleshooting:\n• Check your internet connection\n• Try reloading the extension (chrome://extensions)\n• Ensure you\'re not behind a restrictive firewall';
-            } else if (errorMsg.includes('Security') || errorMsg.includes('CSP')) {
-                displayError += '\n\nPlease reload the extension and try again.';
-            }
-
-            webllmError.textContent = displayError;
-            webllmError.style.display = 'block';
-            btnDownloadWebllm.disabled = false;
-            webllmModelStatusSpan.textContent = 'Error';
-        } else {
-            addWebLLMLog('Download started successfully!');
-            addWebLLMLog('Fetching model from MLC AI servers...');
-            // Show progress container
-            webllmProgressContainer.style.display = 'block';
-            btnDownloadWebllm.style.display = 'none';
-            // Start polling
-            pollWebLLMProgress();
-        }
-    });
-}
-function deleteWebLLMModel() {
-    if (!confirm('Are you sure you want to delete the cached model? You will need to re-download it to use WebLLM.')) {
-        return;
-    }
-
-    addWebLLMLog('Deleting model cache...');
-    btnDeleteWebllm.disabled = true;
-
-    chrome.runtime.sendMessage({ type: 'DELETE_WEBLLM_MODEL' }, (response) => {
-        btnDeleteWebllm.disabled = false;
-        if (chrome.runtime.lastError) {
-            addWebLLMLog('ERROR Deleting: ' + chrome.runtime.lastError.message);
-            return;
-        }
-
-        if (response && response.success) {
-            addWebLLMLog('Model deleted successfully.');
-            // Reset UI state
-            currentLoadedModelId = null;
-            updateDownloadUI({ status: 'idle', text: '', progress: 0 });
-        } else {
-            addWebLLMLog('Error deleting model: ' + (response ? response.error : 'Unknown'));
-        }
-    });
-}
-
-
-let pollingInterval = null;
-let lastProgressText = '';
-
-function pollWebLLMProgress() {
-    if (pollingInterval) clearInterval(pollingInterval);
-
-    pollingInterval = setInterval(() => {
-        chrome.runtime.sendMessage({ type: 'GET_WEBLLM_PROGRESS' }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error('[Options] Polling error:', chrome.runtime.lastError);
-                return;
-            }
-
-            if (response) {
-                updateDownloadUI(response);
-            }
-
-            if (response && (response.status === 'ready' || response.status === 'error')) {
-                clearInterval(pollingInterval);
-                pollingInterval = null;
-            }
-        });
-    }, 300); // Poll more frequently for smoother progress
-}
-
-function updateDownloadUI(state) {
-    if (!state) return;
-
-    // We assume state reflects the *current operation*.
-    // If status is ready, we update local currentLoadedModelId to whatever is selected (assumption)
-    // or ideally background tells us. 
-    // For now, if state.status === 'ready', we assume current selection is valid.
-
-    const progressPercent = Math.round((state.progress || 0) * 100);
-
-    if (state.status === 'downloading') {
-        webllmProgressContainer.style.display = 'block';
-        webllmProgressBar.style.width = progressPercent + '%';
-        webllmProgressPercent.textContent = progressPercent + '%';
-        webllmProgressText.textContent = state.text || 'Downloading...';
-        webllmModelStatusSpan.textContent = 'Downloading...';
-        btnDownloadWebllm.style.display = 'none';
-        btnDeleteWebllm.style.display = 'none';
-
-        // Log progress milestones or new status text
-        if (state.text && state.text !== lastProgressText) {
-            addWebLLMLog(state.text);
-            lastProgressText = state.text;
-        }
-    } else if (state.status === 'ready') {
-        // Mark as loaded
-        currentLoadedModelId = webllmModelSelect.value; // Optimistic sync
-
-        webllmProgressContainer.style.display = 'block';
-        webllmProgressBar.style.width = '100%';
-        webllmProgressPercent.textContent = '100%';
-        webllmProgressText.textContent = 'Model loaded successfully!';
-
-        webllmModelStatusSpan.textContent = 'Ready';
-        webllmModelStatusSpan.style.color = 'var(--success)';
-
-        btnDownloadWebllm.style.display = 'none';
-        btnDeleteWebllm.style.display = 'inline-flex';
-
-        // Log only if freshly done
-        if (lastProgressText !== 'Done') {
-            addWebLLMLog('✓ Model loaded and ready to use!');
-            lastProgressText = 'Done';
-        }
-
-    } else if (state.status === 'error') {
-        addWebLLMLog('ERROR: ' + state.text);
-        webllmError.textContent = state.text;
-        webllmError.style.display = 'block';
-        webllmModelStatusSpan.textContent = 'Error';
-        webllmModelStatusSpan.style.color = 'var(--error)';
-        btnDownloadWebllm.disabled = false;
-        btnDownloadWebllm.style.display = 'inline-flex';
-        btnDeleteWebllm.style.display = 'inline-flex'; // Allow delete to retry clean
-    } else if (state.status === 'idle') {
-        // Model not yet loaded, show download button
-        webllmProgressContainer.style.display = 'none';
-        webllmModelStatusSpan.textContent = 'Not Loaded';
-        btnDownloadWebllm.disabled = false;
-        btnDownloadWebllm.innerText = 'Download Selected Model'; // Update text
-        btnDownloadWebllm.style.display = 'inline-flex';
-        btnDeleteWebllm.style.display = 'none'; // Can't delete what's not there/loaded? 
-        // Actually, cache presence check is hard without loading. 
-        // We'll show delete only if "Ready" for now, or just leave hidden if idle. 
-        // User asked for "remove in case...". If it's idle, we don't know if it's on disk.
-        // Compromise: Add a "Clear Cache" button visible in idle? Or just sticking to "Delete" when Loaded is safer context.
-        // Actually, "Idle" might mean "I just opened the page". 
-        // If I have downloaded it before, I want to delete it without loading it (which takes time).
-        // But checking `caches.has()` is async.
-        // Let's keep it simple: Delete button available if we *think* it might be there, or simply always available?
-        // Let's make Delete available always but maybe minimal style if idle.
-        // For now: Hide in idle to prevent confusion, show when Ready/Error.
-        // EDIT: User wants to delete to free space. If I can't load it (e.g. broken), I still want to delete.
-        // So showing Delete in 'Error' state is good.
-        // Showing in 'Idle' is tricky if we don't know. 
-        // Use 'inline-flex' if we want it visible. I'll stick to 'none' for idle for now unless user complains.
-    }
-}
-
-// ============================================================
 // EVENT LISTENERS
 // ============================================================
 
 // System prompt buttons
 saveBtn.addEventListener('click', saveSettings);
-resetBtn.addEventListener('click', resetToDefault);
+resetPersonaBtn.addEventListener('click', resetToPersonaDefault);
 systemPromptTextarea.addEventListener('input', updateCharCount);
 
 // API key buttons
@@ -689,42 +416,39 @@ function setupSiteToggles() {
     });
 }
 
-// AI Mode Change Listeners
-document.querySelectorAll('input[name="aiMode"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-        const mode = e.target.value;
-        chrome.storage.sync.set({ aiMode: mode });
-        updateWebLLMUI(mode);
-        // Also refresh status
-        updateAIStatus();
+// AI Mode Toggle Click Handlers
+function setupAIModeToggle() {
+    const toggleOptions = document.querySelectorAll('#aiModeToggle .toggle-option');
+
+    toggleOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            const mode = option.dataset.value;
+
+            // Update UI
+            updateToggleUI(mode);
+
+            // Save to storage
+            chrome.storage.sync.set({ aiMode: mode });
+
+            // Refresh status display
+            updateAIStatus();
+        });
     });
-});
+}
 
-// WebLLM Listeners
-btnDownloadWebllm.addEventListener('click', startWebLLMDownload);
-btnDeleteWebllm.addEventListener('click', deleteWebLLMModel);
-
-// Handle Model Change
-webllmModelSelect.addEventListener('change', (e) => {
-    const newModelId = e.target.value;
-    // Save preference
-    chrome.storage.sync.set({ webllmModelId: newModelId });
-
-    addWebLLMLog(`Selected model: ${newModelId}`);
-
-    // If selected model is different from loaded, update UI to show "Download/Load"
-    if (newModelId !== currentLoadedModelId) {
-        // Reset UI to idle-like state for this new model
-        updateDownloadUI({ status: 'idle' });
-        webllmModelStatusSpan.textContent = 'Not Loaded (Click Download)';
-        webllmModelStatusSpan.style.color = 'var(--text-secondary)';
-    } else {
-        // If switching back to loaded model
-        updateDownloadUI({ status: 'ready' });
-    }
-
-    updateAIStatus();
-});
+/**
+ * Update the toggle UI to reflect selected mode
+ */
+function updateToggleUI(mode) {
+    const toggleOptions = document.querySelectorAll('#aiModeToggle .toggle-option');
+    toggleOptions.forEach(opt => {
+        if (opt.dataset.value === mode) {
+            opt.classList.add('active');
+        } else {
+            opt.classList.remove('active');
+        }
+    });
+}
 
 // Keyboard shortcut: Ctrl/Cmd + S to save
 document.addEventListener('keydown', (e) => {
@@ -735,16 +459,550 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
+// PROMPT HISTORY MODULE
+// ============================================================
+
+// History DOM Elements
+const historyHeader = document.getElementById('history-header');
+const historyToggle = document.getElementById('history-toggle');
+const historyContent = document.getElementById('history-content');
+const historyList = document.getElementById('history-list');
+const historyEmpty = document.getElementById('history-empty');
+const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+/**
+ * Format timestamp to human-readable string
+ */
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+/**
+ * Get mode badge class and text
+ */
+function getModeInfo(mode) {
+    switch (mode) {
+        case 'local':
+            return { class: 'local', text: '⚡ Local Nano' };
+        case 'cloud':
+        default:
+            return { class: 'cloud', text: '☁️ Cloud' };
+    }
+}
+
+/**
+ * Render a single history entry
+ */
+function renderHistoryEntry(entry) {
+    const modeInfo = getModeInfo(entry.mode);
+
+    const div = document.createElement('div');
+    div.className = 'history-entry';
+
+    div.innerHTML = `
+        <div class="history-entry-header">
+            <span class="history-timestamp">${formatTimestamp(entry.timestamp)}</span>
+            <span class="history-mode-badge ${modeInfo.class}">${modeInfo.text}</span>
+        </div>
+        <div class="history-section">
+            <div class="history-section-label">User Input</div>
+            <div class="history-section-content" data-expandable="true">${escapeHtml(entry.userInput)}</div>
+            <button class="history-expand-btn" style="display: none;">Show more</button>
+        </div>
+        <div class="history-section">
+            <div class="history-section-label">System Prompt</div>
+            <div class="history-section-content" data-expandable="true">${escapeHtml(entry.systemPrompt)}</div>
+            <button class="history-expand-btn" style="display: none;">Show more</button>
+        </div>
+        ${entry.polishedOutput ? `
+        <div class="history-section">
+            <div class="history-section-label">Polished Output</div>
+            <div class="history-section-content" data-expandable="true">${escapeHtml(entry.polishedOutput)}</div>
+            <button class="history-expand-btn" style="display: none;">Show more</button>
+        </div>
+        ` : ''}
+    `;
+
+    // Setup expand/collapse for long content
+    div.querySelectorAll('[data-expandable="true"]').forEach(content => {
+        const btn = content.nextElementSibling;
+        // Check if content overflows
+        setTimeout(() => {
+            if (content.scrollHeight > content.clientHeight + 10) {
+                btn.style.display = 'block';
+                btn.addEventListener('click', () => {
+                    content.classList.toggle('expanded');
+                    btn.textContent = content.classList.contains('expanded') ? 'Show less' : 'Show more';
+                });
+            }
+        }, 0);
+    });
+
+    return div;
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+/**
+ * Load and render prompt history
+ */
+async function loadPromptHistory() {
+    try {
+        const result = await chrome.storage.local.get(['promptHistory']);
+        const history = result.promptHistory || [];
+
+        historyList.innerHTML = '';
+
+        if (history.length === 0) {
+            historyEmpty.style.display = 'block';
+            clearHistoryBtn.style.display = 'none';
+        } else {
+            historyEmpty.style.display = 'none';
+            clearHistoryBtn.style.display = 'inline-flex';
+
+            history.forEach(entry => {
+                historyList.appendChild(renderHistoryEntry(entry));
+            });
+        }
+    } catch (error) {
+        console.error('[PromptSmith] Error loading prompt history:', error);
+        historyEmpty.textContent = 'Error loading history.';
+        historyEmpty.style.display = 'block';
+    }
+}
+
+/**
+ * Clear prompt history
+ */
+async function clearPromptHistory() {
+    if (!confirm('Are you sure you want to clear all prompt history?')) {
+        return;
+    }
+
+    try {
+        await chrome.storage.local.set({ promptHistory: [] });
+        await loadPromptHistory();
+    } catch (error) {
+        console.error('[PromptSmith] Error clearing prompt history:', error);
+    }
+}
+
+/**
+ * Toggle history section visibility
+ */
+function toggleHistorySection() {
+    historyContent.classList.toggle('collapsed');
+    historyToggle.classList.toggle('collapsed');
+}
+
+// History Event Listeners
+if (historyHeader) historyHeader.addEventListener('click', toggleHistorySection);
+if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearPromptHistory);
+
+// ============================================================
+// ONBOARDING MODULE
+// ============================================================
+
+// Onboarding DOM Elements
+const onboardingOverlay = document.getElementById('onboarding-overlay');
+const onboardingContent = document.getElementById('onboarding-content');
+const progressDotsContainer = document.getElementById('progress-dots');
+const prevStepBtn = document.getElementById('prev-step');
+const nextStepBtn = document.getElementById('next-step');
+const skipOnboardingBtn = document.getElementById('skip-onboarding');
+
+// Skip Warning Elements
+const skipWarningOverlay = document.getElementById('skip-warning-overlay');
+const warningGoBackBtn = document.getElementById('warning-go-back');
+const warningContinueBtn = document.getElementById('warning-continue');
+
+// Onboarding State
+const ONBOARDING_STEPS = [
+    { id: 'welcome', title: 'Welcome' },
+    { id: 'setup', title: 'Configure AI' },
+    { id: 'nano', title: 'Local AI Setup' },
+    { id: 'demo', title: 'See It In Action' },
+    { id: 'ready', title: 'All Set!' }
+];
+let currentOnboardingStep = 0;
+let detectedFeatures = {
+    geminiNano: { available: false, status: 'checking' },
+    hasApiKey: false
+};
+
+/**
+ * Show the onboarding overlay
+ */
+function showOnboarding() {
+    onboardingOverlay.style.display = 'flex';
+    renderProgressDots();
+    goToStep(0);
+}
+
+/**
+ * Hide the onboarding overlay
+ */
+function hideOnboarding() {
+    onboardingOverlay.style.display = 'none';
+}
+
+/**
+ * Render progress dots based on current step
+ */
+function renderProgressDots() {
+    progressDotsContainer.innerHTML = '';
+    ONBOARDING_STEPS.forEach((step, index) => {
+        const dot = document.createElement('div');
+        dot.className = 'progress-dot';
+        if (index < currentOnboardingStep) dot.classList.add('completed');
+        if (index === currentOnboardingStep) dot.classList.add('active');
+        progressDotsContainer.appendChild(dot);
+    });
+}
+
+/**
+ * Navigate to a specific step
+ */
+function goToStep(stepIndex) {
+    if (stepIndex < 0 || stepIndex >= ONBOARDING_STEPS.length) return;
+
+    currentOnboardingStep = stepIndex;
+    renderProgressDots();
+    renderStepContent(ONBOARDING_STEPS[stepIndex].id);
+
+    // Update navigation buttons
+    prevStepBtn.style.visibility = stepIndex === 0 ? 'hidden' : 'visible';
+
+    if (stepIndex === ONBOARDING_STEPS.length - 1) {
+        nextStepBtn.textContent = 'Start Polishing! ✨';
+    } else {
+        nextStepBtn.textContent = 'Next →';
+    }
+}
+
+/**
+ * Render content for a specific step
+ */
+function renderStepContent(stepId) {
+    let html = '';
+
+    switch (stepId) {
+        case 'welcome':
+            html = `
+                <div class="step-content">
+                    <h2 class="step-title">Thank you for installing PromptSmith! ✨</h2>
+                    <p class="step-subtitle">
+                        Privacy-first AI prompt refinement for ChatGPT, Claude, and Gemini. 
+                        Let's get you set up in just a few steps.
+                    </p>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">🔐</div>
+                            <div class="feature-title">Privacy First</div>
+                            <div class="feature-desc">Your prompts stay on your device when possible</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">⚡</div>
+                            <div class="feature-title">2-Tier AI</div>
+                            <div class="feature-desc">Cloud → Local Nano fallback</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🎭</div>
+                            <div class="feature-title">4 Personas</div>
+                            <div class="feature-desc">Polisher, Developer, Thinker, Custom</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'setup':
+            html = `
+                <div class="step-content">
+                    <h2 class="step-title">Configure Your AI Provider</h2>
+                    <p class="step-subtitle">
+                        Enter your Google AI API key to enable Gemini Flash. This is the fastest and most reliable option.
+                    </p>
+                    <div class="setup-input-group">
+                        <label for="onboarding-api-key">Google AI API Key</label>
+                        <input type="password" id="onboarding-api-key" placeholder="AIza..." spellcheck="false">
+                        <p class="setup-hint">
+                            Get a free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                        </p>
+                    </div>
+                    <div class="recommendation-box" style="margin-top: 1rem;">
+                        <h4>💡 Prefer On-Device AI?</h4>
+                        <p>In the next step, you can also enable <strong>Gemini Nano</strong> for 100% local, on-device processing—no API key required!</p>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'nano':
+            html = `
+                <div class="step-content">
+                    <h2 class="step-title">Enable Gemini Nano (Optional)</h2>
+                    <p class="step-subtitle">
+                        Run AI completely on your device for maximum privacy. Requires Chrome 128+ on supported hardware.
+                    </p>
+                    <div class="nano-setup-steps">
+                        <div class="nano-step">
+                            <div class="nano-step-number">1</div>
+                            <div class="nano-step-content">
+                                <h4>Enable Chrome Flags</h4>
+                                <p>Open <code>chrome://flags</code> in a new tab and enable:</p>
+                                <ul class="nano-flags-list">
+                                    <li><code>#optimization-guide-on-device-model</code> → <strong>Enabled BypassPerfRequirement</strong></li>
+                                    <li><code>#prompt-api-for-gemini-nano</code> → <strong>Enabled</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="nano-step">
+                            <div class="nano-step-number">2</div>
+                            <div class="nano-step-content">
+                                <h4>Relaunch Chrome</h4>
+                                <p>Click the <strong>Relaunch</strong> button that appears at the bottom of the flags page.</p>
+                            </div>
+                        </div>
+                        <div class="nano-step">
+                            <div class="nano-step-number">3</div>
+                            <div class="nano-step-content">
+                                <h4>Download the Model</h4>
+                                <p>Go to <code>chrome://components</code>, find <strong>"Optimization Guide On Device Model"</strong>, and click <strong>"Check for update"</strong>.</p>
+                                <p class="nano-note">⏳ Download is ~1.7GB. Wait for the version to change from <code>0.0.0.0</code>.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="recommendation-box" style="margin-top: 1rem;">
+                        <h4>ℹ️ Already have an API key?</h4>
+                        <p>You can skip this step! Gemini Nano is optional and serves as a privacy-focused fallback when the API is unavailable.</p>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'demo':
+            html = `
+                <div class="step-content">
+                    <h2 class="step-title">See It In Action</h2>
+                    <p class="step-subtitle">
+                        Watch how PromptSmith polishes your prompts with just one click.
+                    </p>
+                    <div class="demo-video-container">
+                        <video id="demo-video" controls autoplay muted loop playsinline>
+                            <source src="usage.mov" type="video/quicktime">
+                            <source src="usage.mov" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'ready':
+            html = `
+                <div class="step-content" style="text-align: center;">
+                    <div class="ready-icon">🎉</div>
+                    <h2 class="step-title">You're All Set!</h2>
+                    <p class="step-subtitle">
+                        PromptSmith is ready to polish your prompts on ChatGPT, Claude, and Gemini.
+                    </p>
+                    <div class="tips-list">
+                        <div class="tip-item">
+                            <span class="tip-icon">✨</span>
+                            <span class="tip-text">Look for the <strong>Polish</strong> button in the chat toolbar</span>
+                        </div>
+                        <div class="tip-item">
+                            <span class="tip-icon">🎭</span>
+                            <span class="tip-text">Click the dropdown arrow to select different personas</span>
+                        </div>
+                        <div class="tip-item">
+                            <span class="tip-icon">⚙️</span>
+                            <span class="tip-text">Access settings anytime by clicking the extension icon</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+    }
+
+    onboardingContent.innerHTML = html;
+}
+
+/**
+ * Get recommendation text based on detected features
+ */
+function getRecommendation() {
+    if (detectedFeatures.hasApiKey) {
+        return 'Great! You already have an API key configured. Gemini Flash will be your primary AI provider for fast, reliable polishing.';
+    } else if (detectedFeatures.geminiNano.available) {
+        return 'Gemini Nano is available! You can use the extension right away. Adding an API key will enable faster cloud processing as the primary option.';
+    } else {
+        return 'We recommend setting up a Gemini Flash API key in the next step. It\'s free and provides the best experience when local AI is unavailable.';
+    }
+}
+
+/**
+ * Run feature detection
+ */
+async function runFeatureDetection() {
+    // Check Gemini Nano
+    const nanoStatus = await checkLocalAIAvailability();
+    detectedFeatures.geminiNano = {
+        available: nanoStatus.available,
+        status: nanoStatus.status
+    };
+
+    // Check for existing API key
+    const storage = await chrome.storage.sync.get(['geminiApiKey']);
+    detectedFeatures.hasApiKey = storage.geminiApiKey && storage.geminiApiKey.trim().length > 0;
+}
+
+/**
+ * Handle next step navigation
+ */
+async function handleNextStep() {
+    const currentStepId = ONBOARDING_STEPS[currentOnboardingStep].id;
+
+    // Handle setup step - save API key if entered
+    if (currentStepId === 'setup') {
+        const apiKeyInput = document.getElementById('onboarding-api-key');
+        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+
+        if (apiKey) {
+            // Validate and save API key
+            if (!apiKey.startsWith('AIza')) {
+                // Show error in the input
+                apiKeyInput.style.borderColor = 'var(--error)';
+                apiKeyInput.placeholder = 'Invalid format - keys start with AIza...';
+                return;
+            }
+
+            await chrome.storage.sync.set({ geminiApiKey: apiKey });
+            detectedFeatures.hasApiKey = true;
+        }
+    }
+
+    // Go to next step or complete
+    if (currentOnboardingStep < ONBOARDING_STEPS.length - 1) {
+        goToStep(currentOnboardingStep + 1);
+    } else {
+        // Complete onboarding
+        await completeOnboarding();
+    }
+}
+
+/**
+ * Handle previous step navigation
+ */
+function handlePrevStep() {
+    if (currentOnboardingStep > 0) {
+        goToStep(currentOnboardingStep - 1);
+    }
+}
+
+/**
+ * Show skip warning modal
+ */
+function showSkipWarning() {
+    skipWarningOverlay.style.display = 'flex';
+}
+
+/**
+ * Hide skip warning modal
+ */
+function hideSkipWarning() {
+    skipWarningOverlay.style.display = 'none';
+}
+
+/**
+ * Complete the onboarding process
+ */
+async function completeOnboarding() {
+    await chrome.storage.sync.set({ hasCompletedOnboarding: true });
+    hideOnboarding();
+
+    // Refresh the main settings UI
+    await loadSettings();
+    await updateAIStatus();
+}
+
+/**
+ * Skip onboarding and show warning
+ */
+function handleSkipOnboarding() {
+    showSkipWarning();
+}
+
+/**
+ * Continue to settings (skip confirmed)
+ */
+async function handleSkipConfirmed() {
+    hideSkipWarning();
+    await completeOnboarding();
+}
+
+/**
+ * Go back to onboarding from warning
+ */
+function handleSkipCancelled() {
+    hideSkipWarning();
+}
+
+// Onboarding Event Listeners
+if (nextStepBtn) nextStepBtn.addEventListener('click', handleNextStep);
+if (prevStepBtn) prevStepBtn.addEventListener('click', handlePrevStep);
+if (skipOnboardingBtn) skipOnboardingBtn.addEventListener('click', handleSkipOnboarding);
+if (warningGoBackBtn) warningGoBackBtn.addEventListener('click', handleSkipCancelled);
+if (warningContinueBtn) warningContinueBtn.addEventListener('click', handleSkipConfirmed);
+
+// ============================================================
 // INITIALIZATION
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check if onboarding has been completed
+    const { hasCompletedOnboarding } = await chrome.storage.sync.get(['hasCompletedOnboarding']);
+
+    if (!hasCompletedOnboarding) {
+        // Show onboarding for first-time users
+        showOnboarding();
+    }
+
     // Load saved settings
     await loadSettings();
 
     // Check and display AI status
     await updateAIStatus();
 
+    // Load prompt history
+    await loadPromptHistory();
+
     // Setup listeners
     setupSiteToggles();
+    setupAIModeToggle();
 });

@@ -20,18 +20,15 @@ The extension stores the following data **locally in your browser** using Chrome
 |-----------|---------|------------------|
 | API Key (optional) | To use Gemini Flash API for prompt enhancement | Local browser storage |
 | User Preferences | Site toggles, selected personas, AI mode settings | Local browser storage |
-| WebLLM Models (optional) | Cached AI models for offline processing | Local browser storage |
 | Custom Personas | User-created prompt enhancement personas | Local browser storage |
 
 ## AI Processing Modes
 
-PromptSmith offers three AI processing modes:
+PromptSmith offers two AI processing modes:
 
 1. **Gemini Nano (On-Device)** - All processing happens locally in your browser. No data leaves your device.
 
-2. **WebLLM (On-Device)** - Uses locally cached models. No data leaves your device.
-
-3. **Gemini Flash API (Cloud)** - Your prompt text is sent to Google's Generative Language API for processing. This is optional and only used if you provide an API key.
+2. **Gemini Flash API (Cloud)** - Your prompt text is sent to Google's Generative Language API for processing. This is optional and only used if you provide an API key.
 
 ## Permissions Explained
 
@@ -39,13 +36,11 @@ PromptSmith offers three AI processing modes:
 |------------|----------------|
 | `activeTab` | To access the current page and inject the PromptSmith button on supported AI chat sites |
 | `storage` | To save your preferences, API key, and custom personas locally |
-| `unlimitedStorage` | To cache WebLLM models locally for offline AI processing |
 | Host permissions | To inject functionality into ChatGPT, Claude, and Gemini websites |
 
 ## Third-Party Services
 
 - **Google Generative Language API**: Only used if you choose to enable the Gemini Flash API mode and provide your own API key. Subject to [Google's Privacy Policy](https://policies.google.com/privacy).
-- **Hugging Face**: WebLLM models are downloaded from Hugging Face. No personal data is sent. Subject to [Hugging Face Privacy Policy](https://huggingface.co/privacy).
 
 ## Data Sharing
 

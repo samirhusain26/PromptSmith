@@ -2,13 +2,12 @@
  * PromptSmith - Unified AI Service
  * 
  * Implements hybrid fallback system:
- * Priority 1: Local (Gemini Nano via LanguageModel API)
- * Priority 2: Cloud (Gemini Flash API)
- * 
- * Privacy First: Only uses cloud when local fails and user explicitly provided API key
+ * Priority 1: Cloud (Gemini Flash API) - if API key is provided
+ * Priority 2: Local (Gemini Nano via LanguageModel API)
  */
 
 import { GEMINI_API_ENDPOINT } from './constants.js';
+import { META_PROMPT } from './prompts.js';
 
 // Cache for AI session
 let localAISession = null;
@@ -63,13 +62,19 @@ async function checkLocalAIAvailability() {
         // 2. Fallback to `LanguageModel` global (Origin Trial API)
         if (typeof LanguageModel !== 'undefined') {
             console.log('[AI Service] Using LEGACY LanguageModel global API');
-            console.log('[AI Service] Calling LanguageModel.availability() with expectedOutputLanguages: ["en"] AND outputLanguage: "en"');
+            console.log('[AI Service] Calling LanguageModel.availability()');
 
-            // Try BOTH parameter styles to ensure compatibility
-            const availability = await LanguageModel.availability({
-                expectedOutputLanguages: ['en'],
-                outputLanguage: 'en'  // Also include singular form
-            });
+            // Note: The legacy availability() may not accept params, but we try to pass them
+            // to suppress Chrome's "No output language was specified" warning
+            let availability;
+            try {
+                availability = await LanguageModel.availability({
+                    expectedOutputLanguages: ['en']
+                });
+            } catch (e) {
+                // If params not supported, fall back to no-param call
+                availability = await LanguageModel.availability();
+            }
             console.log('[AI Service] Local AI availability (Legacy) result:', availability);
 
             switch (availability) {
@@ -185,10 +190,16 @@ async function getLocalAISession(systemPrompt) {
 async function generateWithLocalAI(userPrompt, systemInstruction) {
     const startTotal = performance.now();
 
-    // Construct a combined prompt to force the model to follow instructions.
-    // We do this because sometimes the 'systemPrompt' parameter in the API is ignored 
-    // or treated weakly by the on-device model.
-    const combinedPrompt = `${systemInstruction}\n\nInput to rewrite:\n"${userPrompt}"\n\nRewritten version:`;
+    // 3-LAYER PROMPT STRUCTURE:
+    // Layer 1: System Instruction (persona-specific)
+    // Layer 2: User Input (the text to polish)
+    // Layer 3: Meta Prompt (forces AI to return only the rewritten prompt)
+    const combinedPrompt = `${systemInstruction}
+
+--- USER INPUT TO REWRITE ---
+${userPrompt}
+--- END USER INPUT ---
+${META_PROMPT}`;
 
     console.log('[AI Service] Combined Prompt:', combinedPrompt);
 
@@ -233,17 +244,23 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
     console.log('[AI Service] Prompt length:', userPrompt.length, 'chars');
     console.log('[AI Service] System instruction length:', systemInstruction.length, 'chars');
 
+    // 3-LAYER PROMPT STRUCTURE for Cloud AI:
+    // Layer 1: System Instruction (persona-specific + meta prompt)
+    // Layer 2: User Input (the text to polish)
+    // The meta prompt is appended to system instruction for Cloud API
+    const fullSystemInstruction = `${systemInstruction}\n${META_PROMPT}`;
+
     const requestBody = {
         contents: [
             {
                 parts: [
-                    { text: userPrompt }
+                    { text: `--- USER INPUT TO REWRITE ---\n${userPrompt}\n--- END USER INPUT ---` }
                 ]
             }
         ],
         systemInstruction: {
             parts: [
-                { text: systemInstruction }
+                { text: fullSystemInstruction }
             ]
         },
         generationConfig: {
@@ -375,122 +392,79 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
  */
 async function getAIMode(apiKey = null) {
     // Get user preference
-    let preferredMode = 'auto';
+    let preferredMode = 'hybrid';
     try {
         const storage = await chrome.storage.sync.get(['aiMode']);
-        preferredMode = storage.aiMode || 'auto';
+        preferredMode = storage.aiMode || 'hybrid';
     } catch (e) {
         console.warn('Error reading aiMode config:', e);
     }
 
     const localAvailability = await checkLocalAIAvailability();
-    let webLLMAvailability = { available: false, status: 'unavailable', reason: 'Service not loaded' };
 
-    if (self.WebLLMService) {
-        webLLMAvailability = await self.WebLLMService.checkAvailability();
-    }
-
-    // --- Mode: WebLLM Specific ---
-    if (preferredMode === 'webllm') {
-        if (webLLMAvailability.available) {
-            // Check if model is actually ready (loaded)
-            if (webLLMAvailability.status === 'ready') {
-                return {
-                    mode: 'webllm',
-                    status: '🌐 WebLLM (Ready)',
-                    details: 'Using local Llama 3.2 model.'
-                };
-            } else {
-                return {
-                    mode: 'webllm',
-                    status: '🌐 WebLLM (Needs Setup)',
-                    details: 'WebGPU supported. Model needs to be downloaded in Settings.'
-                };
-            }
-        }
-        return {
-            mode: 'none',
-            status: '⚠️ WebLLM Not Supported',
-            details: webLLMAvailability.reason || 'Browser does not support WebGPU.'
-        };
-    }
-
-    // --- Mode: Gemini Nano Specific ---
-    if (preferredMode === 'gemini-nano') {
+    // --- Mode: Local Only ---
+    if (preferredMode === 'local') {
         if (localAvailability.available) {
             return {
                 mode: 'local',
-                status: '⚡ Gemini Nano (Forced)',
+                status: '⚡ Local Only (Gemini Nano)',
                 details: 'Using on-device Chrome AI.'
             };
         }
         return {
             mode: 'none',
-            status: '⚠️ Gemini Nano Unavailable',
-            details: localAvailability.reason || 'Check chrome://flags.'
+            status: '❌ Local AI Unavailable',
+            details: localAvailability.reason || 'Browser does not support Gemini Nano. Check chrome://flags.'
         };
     }
 
-    // --- Mode: Cloud Specific ---
-    if (preferredMode === 'gemini-flash') {
+    // --- Mode: Cloud Only ---
+    if (preferredMode === 'cloud') {
         if (apiKey && apiKey.trim().length > 0) {
             return {
                 mode: 'cloud',
-                status: '☁️ Gemini Flash (Forced)',
+                status: '☁️ Cloud Only (Gemini Flash)',
                 details: 'Using Google Cloud API.'
             };
         }
         return {
             mode: 'none',
-            status: '⚠️ API Key Missing',
-            details: 'Please add your Google Gemini API key in Settings.'
+            status: '❌ API Key Required',
+            details: 'Cloud Only mode requires a Google Gemini API key.'
         };
     }
 
-    // --- Mode: Auto (Default Fallback Chain) ---
-    // Priority 1: Local Gemini Nano
-    if (localAvailability.available) {
-        return {
-            mode: 'local',
-            status: '⚡ Auto: (Gemini Nano)',
-            details: 'Using on-device AI. Your prompts never leave your browser.'
-        };
-    }
-
-    // Priority 2: Cloud API
+    // --- Mode: Hybrid (Default Fallback Chain) ---
+    // Priority 1: Cloud API (Gemini Flash)
     if (apiKey && apiKey.trim().length > 0) {
         return {
             mode: 'cloud',
-            status: '☁️ Auto: (Gemini Flash)',
-            details: 'Using Google Gemini API. Prompts are sent to Google servers.'
+            status: '☁️ Hybrid: Cloud Active',
+            details: 'Using Gemini Flash API. Falls back to Nano if unavailable.'
         };
     }
 
-    // Priority 3: WebLLM (Only if ready/loaded to avoid unexpected large downloads)
-    if (webLLMAvailability.status === 'ready') {
+    // Priority 2: Local Gemini Nano
+    if (localAvailability.available) {
         return {
-            mode: 'webllm',
-            status: '🌐 Auto: (WebLLM)',
-            details: 'Using local Llama 3.2 model.'
+            mode: 'local',
+            status: '⚡ Hybrid: Local Fallback',
+            details: 'Using on-device AI (no API key). Your prompts stay local.'
         };
     }
 
     // Fallback if nothing available
-    // Hint at what's possible
-    let hint = 'Configure options in Settings.';
-    if (webLLMAvailability.available) hint = 'WebLLM supported but model not loaded. Download it in Settings.';
-
     return {
         mode: 'none',
         status: '⚠️ No AI Available',
-        details: localAvailability.reason || hint
+        details: localAvailability.reason || 'Configure options in Settings.'
     };
 }
 
 /**
  * Main unified function to generate polished text
  * Priority depends on user preference:
- * Auto: Local AI → Cloud AI → WebLLM
+ * Auto: Cloud AI → Local AI (Gemini Nano)
  * Forced: Specific Mode → Error
  * 
  * @param {string} userPrompt - The user's input text to polish
@@ -503,13 +477,13 @@ async function generatePolishedText(userPrompt, systemInstruction) {
     console.log('[AI Service] System instruction length:', systemInstruction?.length || 0);
 
     // Get configuration
-    let preferredMode = 'auto';
+    let preferredMode = 'hybrid';
     let apiKey = null;
 
     try {
         const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode']);
         apiKey = storage.geminiApiKey;
-        preferredMode = storage.aiMode || 'auto';
+        preferredMode = storage.aiMode || 'hybrid';
 
         // Debug: Log API key status (safely)
         console.log('[AI Service] API Key retrieved:', apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)} (${apiKey.length} chars)` : 'NOT SET');
@@ -565,66 +539,35 @@ async function generatePolishedText(userPrompt, systemInstruction) {
         throw new Error('API Key missing');
     };
 
-    const tryWebLLM = async () => {
-        if (self.WebLLMService) {
-            const avail = await self.WebLLMService.checkAvailability();
-            if (avail.available) {
-                // If auto mode, only use if READY
-                if (preferredMode === 'auto' && avail.status !== 'ready') {
-                    throw new Error('WebLLM model not loaded');
-                }
-
-                console.log('[AI Service] Attempting WebLLM...');
-                const rawText = await self.WebLLMService.generate(userPrompt, systemInstruction);
-                return {
-                    success: true,
-                    text: cleanAIResponse(rawText),
-                    mode: 'webllm'
-                };
-            }
-            throw new Error('WebLLM unavailable: ' + avail.reason);
-        }
-        throw new Error('WebLLM Service missing');
-    };
-
     // --- Execution Logic ---
 
-    // 1. Forced Modes
-    if (preferredMode === 'gemini-nano') {
+    // 1. Local Only Mode
+    if (preferredMode === 'local') {
         try { return await tryGeminiNano(); }
-        catch (e) { return { success: false, error: e.message, mode: 'local' }; }
+        catch (e) { return { success: false, error: 'Local Only mode failed: ' + e.message, mode: 'local' }; }
     }
-    if (preferredMode === 'gemini-flash') {
+
+    // 2. Cloud Only Mode
+    if (preferredMode === 'cloud') {
         try { return await tryCloud(); }
-        catch (e) { return { success: false, error: e.message, mode: 'cloud' }; }
-    }
-    if (preferredMode === 'webllm') {
-        try { return await tryWebLLM(); }
-        catch (e) { return { success: false, error: e.message + ' (Check Settings to download model)', mode: 'webllm' }; }
+        catch (e) { return { success: false, error: 'Cloud Only mode failed: ' + e.message, mode: 'cloud' }; }
     }
 
-    // 2. Auto Mode Fallback Chain
-    // Chain: Nano -> Cloud -> WebLLM
+    // 3. Hybrid Mode Fallback Chain
+    // Chain: Cloud -> Nano
 
-    // Attempt 1: Nano
-    try {
-        return await tryGeminiNano();
-    } catch (e) {
-        console.warn('[AI Service] Auto-switch: Nano failed, trying next...');
-    }
-
-    // Attempt 2: Cloud
+    // Attempt 1: Cloud (Gemini API)
     try {
         return await tryCloud();
     } catch (e) {
         console.warn('[AI Service] Auto-switch: Cloud failed, trying next...');
     }
 
-    // Attempt 3: WebLLM
+    // Attempt 2: Gemini Nano (local)
     try {
-        return await tryWebLLM();
+        return await tryGeminiNano();
     } catch (e) {
-        console.warn('[AI Service] Auto-switch: WebLLM failed');
+        console.warn('[AI Service] Auto-switch: Nano failed');
     }
 
     // All failed

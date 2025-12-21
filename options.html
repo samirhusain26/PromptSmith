@@ -10,29 +10,57 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-page: #030712;
-      --bg-card: rgba(17, 24, 39, 0.75);
-      --bg-card-hover: rgba(31, 41, 55, 0.85);
+      /* Light & Airy v2.0 - Sky & Stone Palette */
+      --bg-page: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FAFAFA;
 
-      /* Refined Borders */
-      --border: rgba(255, 255, 255, 0.06);
-      --border-hover: rgba(255, 255, 255, 0.12);
+      /* Subtle Borders */
+      --border: #E2E8F0;
+      --border-hover: #CBD5E1;
 
-      /* Modern Indigo Accent */
-      --accent: #6366f1;
-      --accent-glow: rgba(99, 102, 241, 0.2);
+      /* Primary: Airy Blue */
+      --accent: #0EA5E9;
+      --accent-hover: #0284C7;
+      --accent-subtle: #E0F2FE;
+      --accent-glow: rgba(14, 165, 233, 0.15);
 
       /* Typography Colors */
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
+      --text-primary: #334155;
+      --text-secondary: #94A3B8;
 
-      /* States */
-      --success: #10b981;
+      /* State Colors */
+      --success: #2DD4BF;
       --warning: #f59e0b;
-      --error: #ef4444;
+      --error: #FB7185;
 
-      --card-radius: 16px;
-      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      /* Dimensions */
+      --card-radius: 12px;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-pill: 9999px;
+      --transition: all 0.2s ease;
+
+      /* Physics */
+      --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Dark Mode - Muted Slate */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-page: #1e293b;
+        --bg-card: #1e293b;
+        --bg-card-hover: #334155;
+        --border: #475569;
+        --border-hover: #64748b;
+        --accent: #38BDF8;
+        --accent-subtle: #0F172A;
+        --text-primary: #F1F5F9;
+        --text-secondary: #94A3B8;
+        --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+      }
     }
 
     * {
@@ -44,17 +72,15 @@
     }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg-page);
-      background-image:
-        radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.08), transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.08), transparent 40%);
       color: var(--text-primary);
       min-height: 100vh;
       display: block;
       padding: 3rem;
       overflow-y: auto;
       -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
     }
 
     /* Landscape Grid Layout - Retained but polished */
@@ -71,11 +97,9 @@
       padding-bottom: 4rem;
     }
 
-    /* Modern Glass Card */
+    /* Light & Airy Card - No heavy boxes */
     .card {
       background: var(--bg-card);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
       border: 1px solid var(--border);
       border-radius: var(--card-radius);
       padding: 1.5rem;
@@ -83,13 +107,12 @@
       flex-direction: column;
       transition: var(--transition);
       position: relative;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow);
     }
 
     .card:hover {
       border-color: var(--border-hover);
-      background: var(--bg-card-hover);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--shadow-lg);
     }
 
     .card-header {
@@ -100,18 +123,16 @@
     }
 
     .card-header h2 {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text-primary);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      opacity: 0.9;
     }
 
     .card-header .icon {
-      font-size: 1.1rem;
-      opacity: 0.8;
-      filter: drop-shadow(0 0 8px var(--accent-glow));
+      font-size: 1rem;
+      opacity: 0.7;
     }
 
     /* Grid Areas */
@@ -131,17 +152,15 @@
     }
 
     .logo-area h1 {
-      font-size: 2rem;
-      font-weight: 700;
+      font-size: 1.75rem;
+      font-weight: 300;
       letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-primary);
     }
 
     .logo-icon {
-      font-size: 2.25rem;
+      width: 48px;
+      height: 48px;
       animation: float 6s ease-in-out infinite;
     }
 
@@ -157,47 +176,58 @@
       }
     }
 
-    /* ----- ROW 1 & 2: Main Work Area ----- */
+    /* ----- ROW 1: How It Works (Full Width) ----- */
+    .how-it-works-block {
+      grid-column: span 4;
+    }
+
+    /* ----- ROW 2, 3 & 4: Main Work Area ----- */
     .system-prompt-block {
       grid-column: span 2;
-      grid-row: span 2;
+      grid-row: span 3;
       min-height: 480px;
     }
 
     .model-selection-block {
       grid-column: span 2;
-      min-height: 220px;
-    }
-
-    .default-method-block {
-      grid-column: span 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
-      border: 1px solid rgba(99, 102, 241, 0.15);
-      min-height: 220px;
+      min-height: auto;
     }
 
     .sites-block {
-      grid-column: span 1;
-      min-height: 220px;
+      grid-column: span 2;
+      min-height: auto;
+      padding-top: 0.75rem;
+      justify-content: center;
+      align-items: stretch;
     }
 
-    /* ----- ROW 3: Settings ----- */
+    .sites-block .card-header {
+      display: none;
+    }
+
+    .sites-block .toggles-list {
+      width: 100%;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .sites-block .site-tile {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sites-block .site-card {
+      padding: 1rem 0.75rem;
+    }
+
+    /* ----- ROW 4: API Key below sites ----- */
     .api-key-block {
       grid-column: span 2;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
     }
 
-    .webllm-block {
-      grid-column: span 2;
-    }
 
-    /* ----- ROW 4: Info ----- */
-    .how-it-works-block {
-      grid-column: span 4;
-    }
 
     /* Footer */
     .footer-block {
@@ -211,17 +241,17 @@
       border-top: 1px solid var(--border);
     }
 
-    /* Form Components */
+    /* Form Components - Light & Airy */
     textarea {
       width: 100%;
       height: 100%;
       flex: 1;
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       padding: 1rem;
       color: var(--text-primary);
-      font-family: 'Inter', sans-serif;
+      font-family: inherit;
       font-size: 0.9375rem;
       line-height: 1.6;
       resize: vertical;
@@ -231,8 +261,7 @@
     textarea:focus {
       outline: none;
       border-color: var(--accent);
-      background: rgba(0, 0, 0, 0.3);
-      box-shadow: 0 0 0 1px var(--accent-glow);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
     .preset-chips {
@@ -243,13 +272,13 @@
     }
 
     .preset-chip {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
-      border-radius: 99px;
+      background: var(--accent-subtle);
+      border: 1px solid transparent;
+      border-radius: var(--radius-pill);
       padding: 0.5rem 1rem;
       font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--text-secondary);
+      font-weight: 400;
+      color: var(--accent);
       cursor: pointer;
       transition: var(--transition);
     }
@@ -257,75 +286,128 @@
     .preset-chip:hover {
       background: var(--accent);
       color: white;
-      border-color: var(--accent);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
-    /* Model Selection Grid */
-    .model-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    .preset-chip.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .preset-chip.active:hover {
+      background: var(--accent-hover);
+    }
+
+    /* 3-State Toggle Switch */
+    .toggle-switch-container {
+      display: flex;
+      flex-direction: column;
       gap: 1rem;
       width: 100%;
-      height: 100%;
     }
 
-    .model-option {
+    .toggle-switch {
       position: relative;
-      cursor: pointer;
-      height: 100%;
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      gap: 4px;
     }
 
-    .model-option input {
+    .toggle-switch input {
       position: absolute;
       opacity: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10;
-      cursor: pointer;
+      pointer-events: none;
     }
 
-    .model-card {
-      height: 100%;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem 0.75rem;
+    .toggle-option {
+      flex: 1;
+      position: relative;
+      z-index: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding: 0.875rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: var(--transition);
       text-align: center;
+    }
+
+    .toggle-option:hover {
+      background: var(--accent-subtle);
+    }
+
+    .toggle-option.active {
+      background: var(--accent-subtle);
+      box-shadow: inset 0 0 0 1px var(--accent);
+    }
+
+    .toggle-option .toggle-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
       transition: var(--transition);
     }
 
-    .model-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 0.25rem;
-    }
-
-    .model-desc {
-      font-size: 0.75rem;
+    .toggle-option .toggle-desc {
+      font-size: 0.7rem;
       color: var(--text-secondary);
-      line-height: 1.4;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+      transition: var(--transition);
     }
 
-    .model-option input:checked+.model-card {
-      background: rgba(99, 102, 241, 0.1);
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent);
-    }
-
-    .model-option input:checked+.model-card .model-title {
+    .toggle-option.active .toggle-label {
       color: var(--accent);
     }
 
-    .model-option:hover .model-card {
-      background: rgba(255, 255, 255, 0.05);
-      transform: translateY(-2px);
+    .toggle-option.active .toggle-desc {
+      opacity: 1;
+    }
+
+    /* Center option (Hybrid) emphasis */
+    .toggle-option.center {
+      position: relative;
+    }
+
+    .toggle-option.center::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 20%;
+      height: 60%;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .toggle-option.center::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 20%;
+      height: 60%;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .toggle-option.center.active::before,
+    .toggle-option.center.active::after {
+      opacity: 0;
+    }
+
+    .recommended-badge {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: var(--accent-subtle);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      margin-top: 0.35rem;
     }
 
     /* Default Method Status */
@@ -359,17 +441,30 @@
 
     /* Sites Toggles */
     .toggles-list {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      display: flex;
       gap: 0.75rem;
-      height: 100%;
-      align-content: center;
+      flex-wrap: wrap;
+    }
+
+    .site-tile {
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .site-icon-svg {
+      width: 20px;
+      height: 20px;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+
+    .site-tile input:checked+.site-card .site-icon-svg {
+      opacity: 1;
     }
 
     .site-tile {
       position: relative;
       cursor: pointer;
-      aspect-ratio: 1;
     }
 
     .site-tile input {
@@ -383,7 +478,6 @@
 
     .site-card {
       width: 100%;
-      height: 100%;
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -391,6 +485,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding: 0.75rem;
       transition: var(--transition);
     }
 
@@ -400,9 +495,15 @@
     }
 
     .site-tile input:checked+.site-card {
-      background: rgba(99, 102, 241, 0.1);
+      background: rgba(14, 165, 233, 0.15);
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), inset 0 0 20px rgba(14, 165, 233, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .site-tile input:checked+.site-card {
+        background: rgba(56, 189, 248, 0.12);
+      }
     }
 
     .site-name {
@@ -444,7 +545,7 @@
     input[type="text"]:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent-glow);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
     .btn-mini,
@@ -454,8 +555,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      border-radius: 8px;
-      font-weight: 500;
+      border-radius: var(--radius-sm);
+      font-weight: 400;
       font-size: 0.9rem;
       cursor: pointer;
       transition: var(--transition);
@@ -464,39 +565,48 @@
 
     .btn-mini {
       width: 42px;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--bg-card);
       border-color: var(--border);
       color: var(--text-secondary);
       padding: 0;
     }
 
     .btn-mini:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-primary);
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border-color: transparent;
     }
 
+    /* Translucent primary button - fills on hover */
     .btn-primary {
-      background: var(--accent);
-      color: white;
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border: 1px solid rgba(14, 165, 233, 0.2);
       padding: 0 1.5rem;
     }
 
     .btn-primary:hover {
-      background: #4f46e5;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      background: var(--accent);
+      color: white;
+      border-color: transparent;
       transform: translateY(-1px);
     }
 
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--bg-card);
       color: var(--text-primary);
       border-color: var(--border);
       padding: 0 1.25rem;
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: var(--border-hover);
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border-color: transparent;
     }
 
     /* Footer & Info */
@@ -527,7 +637,7 @@
 
     .info-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 1.5rem;
     }
 
@@ -594,6 +704,160 @@
       color: var(--error);
     }
 
+    /* ============================================================
+       PROMPT HISTORY STYLES
+       ============================================================ */
+
+    .prompt-history-block {
+      grid-column: span 4;
+    }
+
+    .prompt-history-block .card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .prompt-history-block .card-header:hover {
+      opacity: 0.8;
+    }
+
+    .history-toggle {
+      margin-left: auto;
+      transition: transform 0.3s ease;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .history-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .history-content {
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      max-height: 600px;
+      opacity: 1;
+    }
+
+    .history-content.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .history-entry {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      transition: var(--transition);
+    }
+
+    .history-entry:hover {
+      border-color: var(--border-hover);
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .history-entry-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .history-timestamp {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .history-mode-badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 99px;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .history-mode-badge.local {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+    }
+
+
+
+    .history-section {
+      margin-bottom: 0.75rem;
+    }
+
+    .history-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .history-section-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+
+    .history-section-content {
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      padding: 0.75rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .history-section-content.expanded {
+      max-height: none;
+    }
+
+    .history-expand-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 0.25rem 0;
+      margin-top: 0.25rem;
+    }
+
+    .history-expand-btn:hover {
+      text-decoration: underline;
+    }
+
+    .history-empty {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 2rem;
+      font-size: 0.9rem;
+    }
+
+    .history-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
+    }
+
     /* Responsive Breakpoints */
     @media (max-width: 900px) {
       .grid-container {
@@ -605,8 +869,8 @@
       .default-method-block,
       .sites-block,
       .api-key-block,
-      .webllm-block,
-      .how-it-works-block {
+      .how-it-works-block,
+      .prompt-history-block {
         grid-column: span 1;
       }
 
@@ -618,6 +882,518 @@
         padding: 1.5rem;
       }
     }
+
+    /* ============================================================
+       ONBOARDING OVERLAY STYLES
+       ============================================================ */
+
+    .onboarding-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 7, 18, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .onboarding-modal {
+      background: var(--bg-card);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 640px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .onboarding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .progress-dots {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: var(--transition);
+    }
+
+    .progress-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    .progress-dot.completed {
+      background: var(--success);
+    }
+
+    .skip-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+
+    .skip-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+    }
+
+    .onboarding-content {
+      flex: 1;
+      padding: 2rem 2.5rem;
+      overflow-y: auto;
+      min-height: 380px;
+    }
+
+    .onboarding-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    /* Step Content Styles */
+    .step-content {
+      animation: fadeInStep 0.3s ease-out;
+    }
+
+    @keyframes fadeInStep {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .step-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .step-subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: var(--transition);
+    }
+
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .feature-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Detection Results */
+    .detection-result {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+    }
+
+    .detection-result.available {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .detection-result.unavailable {
+      border-color: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.03);
+    }
+
+    .detection-icon {
+      font-size: 1.5rem;
+    }
+
+    .detection-info h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .detection-info p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .recommendation-box {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 12px;
+    }
+
+    .recommendation-box h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .recommendation-box p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Setup Step */
+    .setup-input-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .setup-input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .setup-input-group input {
+      width: 100%;
+      height: 48px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition);
+    }
+
+    .setup-input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .setup-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+    }
+
+    .setup-hint a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .setup-hint a:hover {
+      text-decoration: underline;
+    }
+
+    /* Demo Step */
+    .demo-video-container {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+    }
+
+    .demo-video-container video {
+      width: 100%;
+      display: block;
+    }
+
+    /* Nano Setup Step */
+    .nano-setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .nano-step {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: var(--transition);
+    }
+
+    .nano-step:hover {
+      border-color: var(--border-hover);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nano-step-number {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: white;
+    }
+
+    .nano-step-content h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: var(--text-primary);
+    }
+
+    .nano-step-content p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+
+    .nano-step-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .nano-step-content code {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    .nano-flags-list {
+      margin: 0.5rem 0 0 0;
+      padding-left: 1.25rem;
+    }
+
+    .nano-flags-list li {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+      line-height: 1.6;
+    }
+
+    .nano-note {
+      font-style: italic;
+      color: var(--warning) !important;
+      font-size: 0.8rem !important;
+    }
+
+    /* Ready Step */
+    .ready-icon {
+      font-size: 4rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      animation: bounce 1s ease-in-out;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-15px);
+      }
+    }
+
+    .tips-list {
+      margin-top: 1.5rem;
+    }
+
+    .tip-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tip-item:last-child {
+      border-bottom: none;
+    }
+
+    .tip-icon {
+      font-size: 1.25rem;
+    }
+
+    .tip-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Skip Warning Modal */
+    .warning-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .warning-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--warning);
+      border-radius: 16px;
+      padding: 1.75rem;
+      max-width: 420px;
+      text-align: center;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .warning-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .warning-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--warning);
+      margin-bottom: 0.75rem;
+    }
+
+    .warning-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .warning-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+
+    /* Onboarding Responsive */
+    @media (max-width: 600px) {
+      .onboarding-modal {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+      }
+
+      .onboarding-content {
+        padding: 1.5rem;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .step-title {
+        font-size: 1.5rem;
+      }
+    }
   </style>
 </head>
 
@@ -626,7 +1402,7 @@
     <!-- Header -->
     <div class="header-block">
       <div class="logo-area">
-        <span class="logo-icon">✨</span>
+        <img src="icons/icon.svg" alt="PromptSmith" class="logo-icon">
         <h1>PromptSmith</h1>
       </div>
       <div style="color: var(--text-secondary); font-size: 0.9rem;">
@@ -634,201 +1410,35 @@
       </div>
     </div>
 
-    <!-- System Prompt (2x2) -->
-    <div class="card system-prompt-block">
-      <div class="card-header">
-        <span class="icon">🎯</span>
-        <h2>System Prompt</h2>
-      </div>
-      <div class="preset-chips">
-        <button class="preset-chip" data-preset="architect">🏗️ Architect</button>
-        <button class="preset-chip" data-preset="agent">🕵️ Agent</button>
-        <button class="preset-chip" data-preset="compiler">💻 Compiler</button>
-        <button class="preset-chip" data-preset="structurer">🧱 Structurer</button>
-        <button class="preset-chip" data-preset="primer">🧠 Primer</button>
-        <button class="preset-chip" data-preset="polisher">✍️ Polisher</button>
-      </div>
-      <textarea id="systemPrompt" placeholder="Enter instructions for how the AI should polish your prompts..."
-        spellcheck="true"></textarea>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-        <span id="charCount" style="font-size: 0.8rem; color: var(--text-secondary);">0 chars</span>
-        <div>
-          <button id="resetBtn" class="btn-secondary">Reset</button>
-          <button id="saveBtn" class="btn-primary" style="margin-right:0;">Save</button>
-        </div>
-      </div>
-      <div id="status" class="status-msg"></div>
-    </div>
-
-    <!-- Model Selection (2x1) -->
-    <div class="card model-selection-block">
-      <div class="card-header">
-        <span class="icon">🤖</span>
-        <h2>Model Selection</h2>
-      </div>
-      <div class="model-grid" id="aiModeGroup">
-        <label class="model-option">
-          <input type="radio" name="aiMode" value="auto" checked>
-          <div class="model-card">
-            <div class="model-title">Auto (Recommended)</div>
-            <div class="model-desc">Local → Cloud → WebLLM</div>
-          </div>
-        </label>
-        <label class="model-option">
-          <input type="radio" name="aiMode" value="gemini-nano">
-          <div class="model-card">
-            <div class="model-title">Gemini Nano</div>
-            <div class="model-desc">Chrome Native AI</div>
-          </div>
-        </label>
-        <label class="model-option">
-          <input type="radio" name="aiMode" value="gemini-flash">
-          <div class="model-card">
-            <div class="model-title">Gemini Flash</div>
-            <div class="model-desc">Google Cloud API</div>
-          </div>
-        </label>
-        <label class="model-option">
-          <input type="radio" name="aiMode" value="webllm">
-          <div class="model-card">
-            <div class="model-title">WebLLM</div>
-            <div class="model-desc">Llama 3.2 via WebGPU</div>
-          </div>
-        </label>
-      </div>
-    </div>
-
-    <!-- Default Method Display (1x1) -->
-    <div class="card default-method-block">
-      <div class="current-method">
-        <div class="method-icon" id="activeMethodIcon">✨</div>
-        <div class="method-name" id="activeMethodName">Detecting...</div>
-        <div class="method-status" id="activeMethodStatus">Checking Availability</div>
-      </div>
-      <!-- Hidden status indicator used by JS logic to maintain compatibility -->
-      <div id="aiStatusIndicator" style="display:none;"></div>
-      <div id="aiStatusDetails" style="display:none;"></div>
-    </div>
-
-    <!-- Site Toggles (1x1) -->
-    <div class="card sites-block">
-      <div class="card-header">
-        <span class="icon">🌐</span>
-        <h2>Enabled Sites</h2>
-      </div>
-      <div class="toggles-list">
-        <label class="site-tile">
-          <input type="checkbox" name="enabledSites" value="chatgpt" checked>
-          <div class="site-card">
-            <span class="site-name">ChatGPT</span>
-          </div>
-        </label>
-        <label class="site-tile">
-          <input type="checkbox" name="enabledSites" value="claude" checked>
-          <div class="site-card">
-            <span class="site-name">Claude</span>
-          </div>
-        </label>
-        <label class="site-tile">
-          <input type="checkbox" name="enabledSites" value="gemini" checked>
-          <div class="site-card">
-            <span class="site-name">Gemini</span>
-          </div>
-        </label>
-      </div>
-    </div>
-
-    <!-- API Key (Expanded to 2 cols) -->
-    <div class="card api-key-block">
-      <div class="card-header">
-        <span class="icon">🔑</span>
-        <h2>Google API Key</h2>
-      </div>
-      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:1rem;">
-          Required for Cloud Fallback (Gemini Flash). Your key is stored locally in Chrome Sync.
-        </p>
-        <div class="input-wrapper">
-          <input type="password" id="apiKey" placeholder="AIza..." spellcheck="false">
-          <button type="button" id="toggleKeyVisibility" class="btn-mini">👁️</button>
-          <button id="saveApiKeyBtn" class="btn-primary">Save</button>
-          <button id="clearApiKeyBtn" class="btn-secondary">Clear</button>
-        </div>
-      </div>
-      <div id="apiKeyStatus" class="status-msg"></div>
-    </div>
-
-    <!-- WebLLM (Expanded to 2 cols) -->
-    <div class="card webllm-block" id="webllm-section">
-      <div class="card-header">
-        <span class="icon">📥</span>
-        <h2>WebLLM (Llama 3.2 on WebGPU)</h2>
-      </div>
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Status Row -->
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div style="color:var(--text-secondary); font-size:0.9rem;">
-            Status: <span id="webllm-model-status" style="color: var(--text-primary); font-weight:600;">Not
-              Loaded</span>
-          </div>
-          <!-- Delete Icon Button -->
-          <button id="btn-delete-webllm" class="btn-mini"
-            style="display:none; color: var(--error); border-color: rgba(239, 68, 68, 0.3);" title="Delete Model Cache">
-            🗑️
-          </button>
-        </div>
-
-        <!-- Model Selection -->
-        <div>
-          <label style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem;">Select
-            Model</label>
-          <select id="webllm-model-select"
-            style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--text-primary); padding:0.5rem; border-radius:8px; font-family:inherit; margin-bottom:0.5rem;">
-            <!-- Populated by JS -->
-          </select>
-        </div>
-
-        <div style="display:flex; justify-content: flex-end;">
-          <button id="btn-download-webllm" class="btn-primary" style="margin-right:0;">Download Selected Model</button>
-        </div>
-
-        <!-- Progress Bar Container -->
-        <div id="webllm-progress-container" style="display:none;">
-          <div
-            style="background: rgba(0,0,0,0.3); border-radius: 8px; height: 12px; overflow: hidden; border: 1px solid var(--border);">
-            <div id="webllm-progress-bar"
-              style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #a855f7); transition: width 0.3s ease; border-radius: 8px;">
-            </div>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-            <span id="webllm-progress-percent"
-              style="font-size: 0.85rem; color: var(--text-primary); font-weight: 600;">0%</span>
-            <span id="webllm-progress-text" style="font-size: 0.8rem; color: var(--text-secondary);"></span>
-          </div>
-        </div>
-
-        <!-- Log Display -->
-        <div id="webllm-log-container"
-          style="display:none; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0.75rem; max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; border: 1px solid var(--border);">
-          <div id="webllm-log" style="color: var(--text-secondary);"></div>
-        </div>
-
-        <!-- Error Display -->
-        <p id="webllm-error" class="status-msg error" style="display:none;"></p>
-        <span id="webllm-status" style="display:none;"></span>
-      </div>
-    </div>
-
-    <!-- How It Works (Full Width) -->
+    <!-- How It Works (Now at top) -->
     <div class="card how-it-works-block">
       <div class="card-header">
-        <span class="icon">ℹ️</span>
         <h2>How It Works</h2>
       </div>
       <div class="info-grid">
         <div class="info-item">
-          <h4>⚡ 1. Local (Nano)</h4>
-          <p>The privacy-first choice. Runs offline in Chrome.</p>
+          <h4>Usage</h4>
+          <p><strong>Important:</strong> You must configure either an API key or on-device AI for the extension to work.
+          </p>
+          <ul>
+            <li>Open ChatGPT, Claude, or Gemini.</li>
+            <li>Look for the <strong>PromptSmith Sparkle</strong> button.</li>
+            <li>Select a persona to instantly refine your prompt.</li>
+          </ul>
+        </div>
+        <div class="info-item">
+          <h4>Cloud API Setup</h4>
+          <p>Fast and reliable. Requires an API key.</p>
+          <ol>
+            <li>Get a free API Key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI
+                Studio</a>.</li>
+            <li>Paste the key in the "Google API Key" section below.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+        </div>
+        <div class="info-item">
+          <h4>Local (Nano) Setup</h4>
+          <p>Privacy-first option. Runs offline in Chrome.</p>
           <ol>
             <li>Open <code>chrome://flags</code> (copy url)</li>
             <li>Enable <code>Optimization Guide On Device Model</code></li>
@@ -838,33 +1448,131 @@
             </li>
           </ol>
         </div>
-        <div class="info-item">
-          <h4>☁️ 2. Cloud (Flash)</h4>
-          <p>Reliable fallback if your device doesn't support Nano.</p>
-          <ol>
-            <li>Get a free API Key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI
-                Studio</a>.</li>
-            <li>Paste the key in the "Google API Key" section above.</li>
-            <li>Click <strong>Save</strong>.</li>
-          </ol>
+      </div>
+    </div>
+
+    <!-- System Prompt (2x2) -->
+    <div class="card system-prompt-block">
+      <div class="card-header">
+        <h2>System Prompt</h2>
+      </div>
+      <div class="preset-chips">
+        <button class="preset-chip" data-preset="polisher">✨ Polisher</button>
+        <button class="preset-chip" data-preset="developer">💻 Developer</button>
+        <button class="preset-chip" data-preset="thinker">🧠 Thinker</button>
+        <button class="preset-chip" data-preset="custom">⚙️ Custom</button>
+      </div>
+      <textarea id="systemPrompt" placeholder="Enter instructions for how the AI should polish your prompts..."
+        spellcheck="true"></textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <button id="resetPersonaBtn" class="btn-secondary"
+            style="font-size: 0.8rem; padding: 0.4rem 0.75rem; height: auto;">Reset to Default</button>
+          <span id="charCount" style="font-size: 0.8rem; color: var(--text-secondary);">0 chars</span>
         </div>
-        <div class="info-item">
-          <h4>🌐 3. WebLLM</h4>
-          <p>Private, powerful AI running in your browser via WebGPU.</p>
-          <ol>
-            <li>Go to the <strong>WebLLM</strong> section above.</li>
-            <li>Click <strong>Download Model</strong> (~600MB).</li>
-            <li>Wait for the progress to complete once.</li>
-          </ol>
+        <div>
+          <button id="saveBtn" class="btn-primary" style="margin-right:0;">Save</button>
         </div>
-        <div class="info-item">
-          <h4>✨ Usage</h4>
-          <p>Once tailored:</p>
-          <ul>
-            <li>Open ChatGPT, Claude, or Gemini.</li>
-            <li>Look for the <strong>PromptSmith Sparkle</strong> button.</li>
-            <li>Select a persona (e.g., "Architect") to instantly refine your prompt.</li>
-          </ul>
+      </div>
+      <div id="status" class="status-msg"></div>
+    </div>
+
+    <!-- Model Selection (with inline status) -->
+    <div class="card model-selection-block">
+      <div class="card-header">
+        <h2>Model Selection</h2>
+        <!-- Inline status display -->
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+
+          <span id="activeMethodName" style="color: var(--accent); font-weight: 600;">Detecting...</span>
+          <span id="activeMethodStatus" style="color: var(--text-secondary); font-size: 0.75rem;"></span>
+        </div>
+      </div>
+      <div class="toggle-switch-container">
+        <div class="toggle-switch" id="aiModeToggle">
+          <div class="toggle-option" data-value="local">
+            <span class="toggle-label">Local Only</span>
+            <span class="toggle-desc">Gemini Nano</span>
+          </div>
+          <div class="toggle-option center active" data-value="hybrid">
+            <span class="toggle-label">Hybrid</span>
+            <span class="toggle-desc">Cloud → Local</span>
+            <span class="recommended-badge">Recommended</span>
+          </div>
+          <div class="toggle-option" data-value="cloud">
+            <span class="toggle-label">Cloud Only</span>
+            <span class="toggle-desc">Gemini Flash</span>
+          </div>
+        </div>
+      </div>
+      <!-- Hidden status indicator used by JS logic to maintain compatibility -->
+      <div id="aiStatusIndicator" style="display:none;"></div>
+      <div id="aiStatusDetails" style="display:none;"></div>
+    </div>
+
+    <!-- Site Toggles -->
+    <div class="card sites-block">
+      <div class="card-header">
+        <h2>Enabled Sites</h2>
+      </div>
+      <div class="toggles-list">
+        <label class="site-tile">
+          <input type="checkbox" name="enabledSites" value="chatgpt" checked>
+          <div class="site-card">
+            <img class="site-icon-svg" src="https://upload.wikimedia.org/wikipedia/commons/e/ef/ChatGPT-Logo.svg"
+              alt="ChatGPT">
+            <span class="site-name">ChatGPT</span>
+          </div>
+        </label>
+        <label class="site-tile">
+          <input type="checkbox" name="enabledSites" value="claude" checked>
+          <div class="site-card">
+            <img class="site-icon-svg" src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Claude_AI_symbol.svg"
+              alt="Claude">
+            <span class="site-name">Claude</span>
+          </div>
+        </label>
+        <label class="site-tile">
+          <input type="checkbox" name="enabledSites" value="gemini" checked>
+          <div class="site-card">
+            <img class="site-icon-svg"
+              src="https://upload.wikimedia.org/wikipedia/commons/1/1d/Google_Gemini_icon_2025.svg" alt="Gemini">
+            <span class="site-name">Gemini</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- API Key (Compact) -->
+    <div class="card api-key-block">
+      <div class="card-header">
+        <h2>Google API Key</h2>
+      </div>
+      <div class="input-wrapper">
+        <input type="password" id="apiKey" placeholder="AIza..." spellcheck="false">
+        <button type="button" id="toggleKeyVisibility" class="btn-mini">👁️</button>
+        <button id="saveApiKeyBtn" class="btn-primary">Save</button>
+        <button id="clearApiKeyBtn" class="btn-secondary">Clear</button>
+      </div>
+      <div id="apiKeyStatus" class="status-msg"></div>
+    </div>
+
+
+
+
+    <!-- Prompt History (Full Width, Collapsible) -->
+    <div class="card prompt-history-block">
+      <div class="card-header" id="history-header">
+        <h2>Prompt History</h2>
+        <span id="history-toggle" class="history-toggle">▼</span>
+      </div>
+      <div id="history-content" class="history-content">
+        <div id="history-list" class="history-list"></div>
+        <div id="history-empty" class="history-empty" style="display: none;">
+          No prompts submitted yet. Use PromptSmith on ChatGPT, Claude, or Gemini to see your history here.
+        </div>
+        <div class="history-actions">
+          <button id="clear-history-btn" class="btn-secondary" style="display: none;">Clear History</button>
         </div>
       </div>
     </div>
@@ -873,9 +1581,44 @@
     <div class="footer-block">
       <a href="https://www.samirhusain.info" target="_blank" class="dev-link">
         <span>About the Developer</span>
-        <span style="font-size: 1.2rem;">👨‍💻</span>
+
       </a>
-      <span style="color: var(--text-secondary); font-size: 0.9rem;">PromptSmith v1.0</span>
+      <span style="color: var(--text-secondary); font-size: 0.9rem;">PromptSmith v1.1</span>
+    </div>
+  </div>
+
+  <!-- Onboarding Overlay -->
+  <div id="onboarding-overlay" class="onboarding-overlay" style="display: none;">
+    <div class="onboarding-modal">
+      <div class="onboarding-header">
+        <div class="progress-dots" id="progress-dots">
+          <!-- Progress dots injected by JS -->
+        </div>
+        <button class="skip-btn" id="skip-onboarding">Skip →</button>
+      </div>
+      <div class="onboarding-content" id="onboarding-content">
+        <!-- Step content injected by JS -->
+      </div>
+      <div class="onboarding-footer" id="onboarding-footer">
+        <button class="btn-secondary" id="prev-step" style="visibility: hidden;">← Back</button>
+        <button class="btn-primary" id="next-step">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skip Warning Modal -->
+  <div id="skip-warning-overlay" class="warning-modal-overlay" style="display: none;">
+    <div class="warning-modal">
+      <div class="warning-icon">⚠️</div>
+      <div class="warning-title">Privacy-First Setup Required</div>
+      <div class="warning-text">
+        PromptSmith prioritizes your privacy by requiring <strong>you</strong> to set up your own API key.<br><br>
+        Without setup, the extension may not work if local AI (Gemini Nano) is unavailable on your device.
+      </div>
+      <div class="warning-buttons">
+        <button class="btn-secondary" id="warning-go-back">Go Back to Setup</button>
+        <button class="btn-primary" id="warning-continue">Continue to Settings</button>
+      </div>
     </div>
   </div>
 

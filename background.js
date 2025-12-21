@@ -9,15 +9,44 @@
  */
 
 // Import dependencies as modules
-import * as webllm from './webllm_lib.js';
-import { WebLLMService } from './webllm_service.js';
 import { AIService } from './ai_service.js';
 import { DEFAULT_SYSTEM_PROMPT } from './constants.js';
 
 // Attach services to global scope for debugging/interaction if needed
-self.webllm = webllm;
-self.WebLLMService = WebLLMService;
 self.AIService = AIService;
+
+// ============================================================
+// PROMPT HISTORY
+// ============================================================
+
+const MAX_HISTORY_ENTRIES = 10;
+
+/**
+ * Save a prompt submission to history
+ * @param {object} entry - The prompt data to save
+ */
+async function saveToPromptHistory(entry) {
+  try {
+    const result = await chrome.storage.local.get(['promptHistory']);
+    const history = result.promptHistory || [];
+
+    // Add new entry to the beginning
+    history.unshift({
+      timestamp: Date.now(),
+      ...entry
+    });
+
+    // Trim to max entries
+    if (history.length > MAX_HISTORY_ENTRIES) {
+      history.length = MAX_HISTORY_ENTRIES;
+    }
+
+    await chrome.storage.local.set({ promptHistory: history });
+    console.log('[PromptSmith] Saved prompt to history, total entries:', history.length);
+  } catch (error) {
+    console.error('[PromptSmith] Error saving to prompt history:', error);
+  }
+}
 
 // ============================================================
 // INSTALLATION & LIFECYCLE
@@ -29,7 +58,8 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Set default settings
     chrome.storage.sync.set({
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      aiMode: 'auto' // Default to auto mode
+      aiMode: 'auto', // Default to auto mode
+      hasCompletedOnboarding: false // Track onboarding state
     }, () => {
       console.log('[PromptSmith] Default settings initialized');
     });
@@ -92,62 +122,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handlePolishText(message.text, sendResponse, message.systemPrompt);
     return true; // Required for async sendResponse
   }
-
-  // Handle WebLLM Download
-  if (message.type === 'START_WEBLLM_DOWNLOAD') {
-    handleWebLLMDownload(message.modelId, sendResponse);
-    return true;
-  }
-
-  // Handle WebLLM Usage/Model Deletion
-  if (message.type === 'DELETE_WEBLLM_MODEL') {
-    handleDeleteWebLLMModel(sendResponse);
-    return true;
-  }
-
-  // Handle WebLLM Progress Check
-  if (message.type === 'GET_WEBLLM_PROGRESS') {
-    if (self.WebLLMService) {
-      sendResponse(self.WebLLMService.getProgress());
-    } else {
-      sendResponse({ status: 'error', text: 'Service not loaded', progress: 0 });
-    }
-    return true; // Required for async sendResponse
-  }
 });
-
-/**
- * Handle WebLLM model download trigger
- */
-async function handleWebLLMDownload(modelId, sendResponse) {
-  if (self.WebLLMService) {
-    try {
-      // Start download (async) - await it so errors are caught
-      await self.WebLLMService.loadModel(modelId);
-      sendResponse({ success: true, status: 'completed' });
-    } catch (e) {
-      sendResponse({ success: false, error: e.message });
-    }
-  } else {
-    sendResponse({ success: false, error: 'WebLLM Service not available' });
-  }
-}
-
-/**
- * Handle WebLLM model deletion
- */
-async function handleDeleteWebLLMModel(sendResponse) {
-  if (self.WebLLMService && self.WebLLMService.deleteModel) {
-    try {
-      await self.WebLLMService.deleteModel();
-      sendResponse({ success: true, status: 'deleted' });
-    } catch (e) {
-      sendResponse({ success: false, error: e.message });
-    }
-  } else {
-    sendResponse({ success: false, error: 'Service not available' });
-  }
-}
 
 /**
  * Get current AI mode (local/cloud/none)
@@ -189,14 +164,27 @@ async function handlePolishText(text, sendResponse, tempSystemPrompt = null) {
 
     if (!systemPrompt) {
       // Fallback to stored settings if no specific prompt provided
-      const storage = await chrome.storage.sync.get(['systemPrompt']);
-      systemPrompt = storage.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+      const storage = await chrome.storage.sync.get(['activePersona', 'customPersonaPrompts']);
+      const persona = storage.activePersona || 'polisher';
+      const customPrompts = storage.customPersonaPrompts || {};
+      systemPrompt = customPrompts[persona] || DEFAULT_SYSTEM_PROMPT;
     }
 
     // Use AI service to generate polished text
     if (self.AIService && self.AIService.generatePolishedText) {
       const result = await self.AIService.generatePolishedText(text, systemPrompt);
       console.log('[PromptSmith] AI generation result:', result.success ? 'success' : 'failed', 'mode:', result.mode);
+
+      // Save to history on successful generation
+      if (result.success) {
+        await saveToPromptHistory({
+          userInput: text,
+          systemPrompt: systemPrompt,
+          mode: result.mode,
+          polishedOutput: result.text
+        });
+      }
+
       sendResponse(result);
     } else {
       sendResponse({

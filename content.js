@@ -18,44 +18,61 @@
         chevronDown: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     };
 
-    const PERSONAS = {
-        polisher: {
-            icon: '✨',
-            label: 'The Polisher (Fix Grammar)',
-            description: 'Refines your prompt for clarity, conciseness,\nand professional tone.',
-            instruction: 'Rewrite this prompt to be clear, concise, and professional. Fix any grammar errors. CRITICAL OUTPUT RULES: You must output ONLY the rewritten prompt. Do NOT include any conversational filler, preambles (e.g., "Here is the prompt"), or postscripts. Enclose the final result strictly within <result> tags. Example Format: <result> [The polished prompt text goes here] </result>'
-        },
-        architect: {
-            icon: '📐',
-            label: 'The Architect (Solve Complex Problems)',
-            description: 'Uses "Tree of Thoughts" to explore multiple\nreasoning branches.',
-            instruction: `You are an expert Prompt Engineer specializing in "Tree of Thoughts" (ToT). Rewrite the user's prompt to force a Large Language Model (LLM) to use "System 2" thinking. The new prompt must require the model to simulate multiple experts, explore multiple reasoning branches, and evaluate its own steps before concluding. CRITICAL OUTPUT RULES: You must output ONLY the rewritten prompt. Do NOT include any conversational filler, preambles (e.g., "Here is the prompt"), or postscripts. Enclose the final result strictly within <result> tags. Example Format: <result> [The polished prompt text goes here] </result>`
-        },
-        agent: {
-            icon: '🤖',
-            label: 'The Agent (Verify Facts)',
-            description: 'Enforces an "Action-Observation-Reflection"\nloop for grounded reasoning.',
-            instruction: `You are an expert in Agentic AI patterns (ReAct, Reflexion). Rewrite the user's prompt to enforce a strict "Action-Observation-Reflection" loop. Explicitly instruct the model to "ground its reasoning in observed reality" and "cite sources." CRITICAL OUTPUT RULES: You must output ONLY the rewritten prompt. Do NOT include any conversational filler, preambles (e.g., "Here is the prompt"), or postscripts. Enclose the final result strictly within <result> tags. Example Format: <result> [The polished prompt text goes here] </result>`
-        },
-        compiler: {
-            icon: '💻',
-            label: 'The Compiler (Optimize for Production)',
-            description: 'Optimizes the prompt structure into a\ndeclarative DSPy signature.',
-            instruction: `You are a DSPy Optimization Specialist. Treat the user's prompt not as conversation, but as a software program. Strip away conversational fluff and restructure it into a declarative "Signature" with Context, Task, Constraints, and Metric. CRITICAL OUTPUT RULES: You must output ONLY the rewritten prompt. Do NOT include any conversational filler, preambles (e.g., "Here is the prompt"), or postscripts. Enclose the final result strictly within <result> tags. Example Format: <result> [The polished prompt text goes here] </result>`
-        },
-        structurer: {
-            icon: '🔧',
-            label: 'The Structurer (Generate Code/JSON)',
-            description: 'Guarantees valid, parsable output like\nJSON or XML.',
-            instruction: `You are a Syntax Enforcement Engineer. Rewrite the user's prompt to guarantee the output is valid, parsable code (XML or JSON). If ambiguous, default to XML. Add a "negative constraint": "Do not include markdown formatting or conversational filler outside the tags". CRITICAL OUTPUT RULES: You must output ONLY the rewritten prompt. Do NOT include any conversational filler, preambles (e.g., "Here is the prompt"), or postscripts. Enclose the final result strictly within <result> tags. Example Format: <result> [The polished prompt text goes here] </result>`
-        },
-        primer: {
-            icon: '🧠',
-            label: 'The Primer (Creative Writing)',
-            description: 'Uses "In-Context Learning" with robust\nfew-shot examples.',
-            instruction: `You are a Contextual Scaling Strategist. Rewrite the prompt to utilize "In-Context Learning" (ICL). Create a "Template" structure with placeholders for "Few-Shot Examples" and a "Pre-fill" instruction. CRITICAL OUTPUT RULES: You must output ONLY the rewritten prompt. Do NOT include any conversational filler, preambles (e.g., "Here is the prompt"), or postscripts. Enclose the final result strictly within <result> tags. Example Format: <result> [The polished prompt text goes here] </result>`
+    // PERSONAS object - will be populated from prompts.js
+    // This is loaded dynamically from the centralized prompts module
+    let PERSONAS = null;
+
+    /**
+     * Load PERSONAS from the centralized prompts.js file
+     * Uses dynamic import via chrome.runtime.getURL
+     */
+    async function loadPersonas() {
+        try {
+            const promptsUrl = chrome.runtime.getURL('prompts.js');
+            const module = await import(promptsUrl);
+            PERSONAS = module.PERSONAS;
+            console.log('[PromptSmith] PERSONAS loaded successfully from prompts.js');
+            return true;
+        } catch (error) {
+            console.error('[PromptSmith] Failed to load PERSONAS from prompts.js:', error);
+            // Fallback to inline definition if dynamic import fails
+            PERSONAS = getFallbackPersonas();
+            return false;
         }
-    };
+    }
+
+    /**
+     * Fallback PERSONAS in case dynamic import fails
+     */
+    function getFallbackPersonas() {
+        console.warn('[PromptSmith] dynamic import of prompts.js failed. Fallback active.');
+        return {
+            polisher: {
+                icon: '✨',
+                label: 'Polisher',
+                description: 'Grammar, clarity, and professional tone.',
+                instruction: 'Error: Could not load personas. Please reload the page.'
+            },
+            developer: {
+                icon: '💻',
+                label: 'Developer',
+                description: 'Code, JSON, and strict structures.',
+                instruction: 'Error: Could not load personas. Please reload the page.'
+            },
+            thinker: {
+                icon: '🧠',
+                label: 'Thinker',
+                description: 'Reasoning, Chain of Thought, and fact-checking.',
+                instruction: 'Error: Could not load personas. Please reload the page.'
+            },
+            custom: {
+                icon: '⚙️',
+                label: 'Custom',
+                description: 'Your own system prompt from Settings.',
+                instruction: '[CUSTOM_PROMPT_PLACEHOLDER]'
+            }
+        };
+    }
 
     const CONFIG = {
         // Unique attribute to mark our injected elements
@@ -135,6 +152,7 @@
     let currentSite = null;
     let debounceTimer = null;
     let currentPersona = 'polisher'; // Default
+    let customPersonaPrompts = {}; // Custom prompts saved from settings page
 
     // Logic for dropdown state management
     let activeDropdownTrigger = null;
@@ -154,22 +172,44 @@
         style.id = 'lpp-styles';
         style.textContent = `
             :root {
-                --lpp-host-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                /* Light & Airy v2.0 - System UI font with fallbacks */
+                --lpp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                
+                /* Sky & Stone Palette */
+                --lpp-primary: #0EA5E9;
+                --lpp-primary-hover: #0284C7;
+                --lpp-primary-subtle: #E0F2FE;
+                --lpp-success: #2DD4BF;
+                --lpp-error: #FB7185;
+                --lpp-bg: #FFFFFF;
+                --lpp-surface: #F8FAFC;
+                --lpp-border: #E2E8F0;
+                --lpp-text: #334155;
+                --lpp-text-muted: #94A3B8;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --lpp-primary: #38BDF8;
+                    --lpp-primary-subtle: #0F172A;
+                    --lpp-bg: #1e293b;
+                    --lpp-surface: #334155;
+                    --lpp-border: #475569;
+                    --lpp-text: #F1F5F9;
+                }
             }
             .lpp-dropdown-portal, .lpp-tooltip, .lpp-button-group {
-                font-family: var(--lpp-host-font) !important;
+                font-family: var(--lpp-font) !important;
             }
             .lpp-button-group {
                 display: inline-flex;
                 align-items: center;
-                margin-right: 8px; /* Spacing from other buttons */
+                margin-right: 8px;
                 vertical-align: middle;
             }
             /* Adjustments for ChatGPT specifically to ensure it fits */
 
             .lpp-native-toolbar.lpp-chatgpt-toolbar {
                 margin-right: 2px;
-                /* height: 32px;  Remove fixed height to match native stretch */
                 height: 100%;
                 background: transparent !important;
                 padding: 0;
@@ -177,12 +217,12 @@
                 box-shadow: none !important;
                 outline: none !important;
                 display: flex;
-                align-items: center; /* Vertical center */
+                align-items: center;
             }
             .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-polish-action,
             .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-dropdown-trigger {
                 background: transparent !important;
-                color: #b4b4b4; /* Native-ish gray */
+                color: var(--lpp-text-muted);
                 border: none !important;
                 box-shadow: none !important;
                 outline: none !important;
@@ -193,67 +233,94 @@
                 justify-content: center;
                 height: 100%;
                 cursor: pointer;
-                transition: background 0.2s, color 0.2s;
+                transition: all 0.2s ease;
             }
             .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-polish-action:hover,
             .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-dropdown-trigger:hover {
-                background: rgba(255, 255, 255, 0.1); /* Dark mode hover */
-                color: #fff;
+                background: var(--lpp-primary-subtle) !important;
+                color: var(--lpp-primary);
             }
             .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-dropdown-trigger {
-                padding: 4px; /* Smaller padding for arrow */
+                padding: 4px;
                 margin-left: 2px;
             }
+            /* Light & Airy Dropdown - "The Sheet" */
             .lpp-dropdown-portal {
                 font-size: 14px;
-                background: #1e1e1e;
-                border: 1px solid #333;
+                font-weight: 400;
+                background: rgba(255,255,255,0.95);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid #F1F5F9;
                 border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-                z-index: 2147483647; /* Max z-index to ensure visibility */
+                box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
+                z-index: 2147483647;
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
-                min-width: 250px;
-                max-width: 350px;
-                padding: 4px;
+                min-width: 200px;
+                max-width: 280px;
+                padding: 6px;
+            }
+            @media (prefers-color-scheme: dark) {
+                .lpp-dropdown-portal {
+                    background: rgba(30, 41, 59, 0.95);
+                    border-color: var(--lpp-border);
+                    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
+                }
             }
             .lpp-dropdown-item {
                 display: flex;
-                align-items: center; /* Compact again */
-                padding: 8px 12px;
+                align-items: center;
+                padding: 10px 14px;
                 cursor: pointer;
                 border-radius: 6px;
-                color: #e8eaed;
-                transition: background 0.2s;
+                color: var(--lpp-text);
+                transition: all 0.15s ease;
+                gap: 10px;
             }
-            .lpp-dropdown-item:hover, .lpp-dropdown-item.selected {
-                background: #333;
+            .lpp-dropdown-item:hover {
+                background: var(--lpp-primary-subtle);
+                color: var(--lpp-primary);
+            }
+            .lpp-dropdown-item.selected {
+                background: var(--lpp-primary-subtle);
+                color: var(--lpp-primary);
             }
             .lpp-item-icon {
-                font-size: 1.2em;
-                margin-right: 12px;
+                font-size: 1em;
                 flex-shrink: 0;
+                width: 18px;
+                text-align: center;
+                color: var(--lpp-text-muted);
+            }
+            .lpp-dropdown-item:hover .lpp-item-icon,
+            .lpp-dropdown-item.selected .lpp-item-icon {
+                color: var(--lpp-primary);
             }
             .lpp-item-label {
-                font-weight: 500;
+                font-weight: 400;
                 font-size: 13px;
-                color: #e8eaed;
+                color: inherit;
             }
-            /* Tooltip Style */
+            /* Tooltip - Soft slate, not harsh black */
             .lpp-tooltip {
                 position: fixed;
-                background: #000;
-                color: #fff;
-                border: 1px solid #333;
+                background: var(--lpp-text);
+                color: var(--lpp-bg);
                 padding: 8px 12px;
                 border-radius: 6px;
-                z-index: 10001;
+                z-index: 2147483647;
                 pointer-events: none;
                 max-width: 200px;
                 font-size: 12px;
                 line-height: 1.4;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+                box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2);
+                animation: lpp-tooltip-in 0.1s ease-out;
+            }
+            @keyframes lpp-tooltip-in {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
             }
 
             /* Claude Native Toolbar Styles */
@@ -726,7 +793,23 @@
         if (currentSite === 'chatgpt') {
             iconSpan.innerHTML = ICONS.sparkle;
         } else {
-            iconSpan.textContent = PERSONAS[currentPersona].icon;
+            // Resolve system instruction
+            let systemInstruction = PERSONAS[currentPersona].instruction;
+
+            // For any persona, check if there's a custom override
+            if (customPersonaPrompts[currentPersona]) {
+                systemInstruction = customPersonaPrompts[currentPersona];
+            }
+
+            // Handle the '[CUSTOM_PROMPT_PLACEHOLDER]' case
+            if (systemInstruction === '[CUSTOM_PROMPT_PLACEHOLDER]') {
+                // This part of the code is for button creation, not action execution.
+                // The actual check and status display should happen in handlePolishClick.
+                // For now, just ensure the icon is set.
+                iconSpan.textContent = PERSONAS[currentPersona].icon;
+            } else {
+                iconSpan.textContent = PERSONAS[currentPersona].icon;
+            }
         }
 
         // Label (optional, hidden on some layouts)
@@ -768,6 +851,18 @@
             createDropdownPortal(PERSONAS, (key) => {
                 // Update State
                 currentPersona = key;
+
+                // Save to chrome.storage.sync for persistence and sync with settings page
+                // Note: We only save the activePersona, not the systemPrompt
+                // This allows custom prompts to be preserved
+                chrome.storage.sync.set({
+                    activePersona: key
+                }).then(() => {
+                    console.log('[PromptSmith] Saved persona to storage:', key);
+                }).catch(err => {
+                    console.error('[PromptSmith] Error saving persona:', err);
+                });
+
                 // Update UI
                 iconSpan.textContent = PERSONAS[key].icon;
                 labelSpan.textContent = PERSONAS[key].label;
@@ -1034,13 +1129,30 @@
         showStatus(`✨ Polishing as ${PERSONAS[currentPersona].label}...`, 'info');
 
         try {
+            // Determine the system prompt to use
+            let systemPrompt = customPersonaPrompts[currentPersona] || PERSONAS[currentPersona].instruction;
+
+            // Special handling for Custom persona: check if a custom prompt is configured
+            if (currentPersona === 'custom') {
+                // Check storage for customPrompt
+                const storage = await new Promise((resolve) => {
+                    chrome.storage.sync.get(['customPrompt'], resolve);
+                });
+
+                if (!storage.customPrompt || storage.customPrompt.trim() === '' || storage.customPrompt === '[CUSTOM_PROMPT_PLACEHOLDER]') {
+                    showStatus('❌ Custom prompt not configured. Please set one in Settings.', 'error');
+                    wrapper.classList.remove('lpp-loading');
+                    return;
+                }
+                systemPrompt = storage.customPrompt;
+            }
+
             const response = await new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage(
                     {
                         type: 'POLISH_TEXT',
                         text: originalText,
-                        // Send the specific instruction for the selected persona
-                        systemPrompt: PERSONAS[currentPersona].instruction
+                        systemPrompt: systemPrompt
                     },
                     (response) => {
                         if (chrome.runtime.lastError) {
@@ -1066,8 +1178,6 @@
                 let modeIndicator = '☁️ Cloud';
                 if (response.mode === 'local') {
                     modeIndicator = '⚡ Local';
-                } else if (response.mode === 'webllm') {
-                    modeIndicator = '🚀 WebLLM';
                 }
                 showStatus(`✓ Done! (${modeIndicator})`, 'success');
 
@@ -1174,12 +1284,25 @@
      * initialize
      */
     async function init() {
+        // Load PERSONAS from prompts.js first
+        await loadPersonas();
+
         currentSite = detectSite();
         if (!currentSite) return;
 
-        // Check if site is enabled
-        const storage = await chrome.storage.sync.get(['enabledSites']);
+        // Check if site is enabled and load active persona + custom prompts
+        const storage = await chrome.storage.sync.get(['enabledSites', 'activePersona', 'customPersonaPrompts']);
         const enabledSites = storage.enabledSites || { chatgpt: true, claude: true, gemini: true };
+
+        // Load custom prompts from settings
+        customPersonaPrompts = storage.customPersonaPrompts || {};
+        console.log('[PromptSmith] Loaded custom prompts for personas:', Object.keys(customPersonaPrompts));
+
+        // Load active persona from storage, default to 'polisher'
+        if (storage.activePersona && PERSONAS[storage.activePersona]) {
+            currentPersona = storage.activePersona;
+            console.log('[PromptSmith] Loaded active persona from storage:', currentPersona);
+        }
 
         if (enabledSites[currentSite] === false) {
             console.log(`[PromptSmith] ${currentSite} is disabled in settings. Skipping injection.`);
@@ -1223,6 +1346,23 @@
 
         // Init keep-alive
         connectKeepAlive();
+
+        // Listen for storage changes to sync custom prompts in real-time
+        chrome.storage.onChanged.addListener((changes, namespace) => {
+            if (namespace === 'sync') {
+                if (changes.customPersonaPrompts) {
+                    customPersonaPrompts = changes.customPersonaPrompts.newValue || {};
+                    console.log('[PromptSmith] Custom prompts updated from settings');
+                }
+                if (changes.activePersona && changes.activePersona.newValue) {
+                    const newPersona = changes.activePersona.newValue;
+                    if (PERSONAS && PERSONAS[newPersona]) {
+                        currentPersona = newPersona;
+                        console.log('[PromptSmith] Active persona synced from settings:', currentPersona);
+                    }
+                }
+            }
+        });
     }
 
     // Run on DOM ready

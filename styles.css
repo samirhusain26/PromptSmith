@@ -1,56 +1,126 @@
 /**
  * PromptSmith - Content Styles
- * Button styling that adapts based on site context (ChatGPT, Claude, Gemini)
+ * Light & Airy Theme v2.0 - "Weightless Utility"
+ * Sky & Stone palette with translucent, floating elements
  */
 
 /* =========================================
-   BASE SPLIT BUTTON STYLES
+   CSS VARIABLES (Style Guide v2.0)
+   ========================================= */
+
+:root {
+    /* Palette: Light & Airy */
+    --ps-primary: #0EA5E9;
+    /* Airy Blue */
+    --ps-primary-hover: #0284C7;
+    /* Deep Sky */
+    --ps-primary-subtle: #E0F2FE;
+    /* Pale Blue Background */
+
+    --ps-success: #2DD4BF;
+    /* Soft Mint */
+    --ps-error: #FB7185;
+    /* Pale Rose */
+
+    /* Neutrals */
+    --ps-bg: #FFFFFF;
+    /* Pure White */
+    --ps-surface: #F8FAFC;
+    /* Vapor Gray */
+    --ps-border: #E2E8F0;
+    /* Mist */
+
+    /* Text */
+    --ps-text-main: #334155;
+    /* Slate 700 (Ink) */
+    --ps-text-muted: #94A3B8;
+    /* Slate 400 (Stone) */
+
+    /* Physics */
+    --ps-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+    --ps-shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.05);
+    --ps-radius: 8px;
+    --ps-radius-sm: 6px;
+
+    /* Typography */
+    --ps-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Dark Mode (Muted Slate, not Pitch Black) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ps-primary: #38BDF8;
+        /* Lighter Sky for Dark Mode */
+        --ps-primary-subtle: #0F172A;
+
+        --ps-bg: #1e293b;
+        /* Slate 800 */
+        --ps-surface: #334155;
+        /* Slate 700 */
+        --ps-border: #475569;
+        /* Slate 600 */
+
+        --ps-text-main: #F1F5F9;
+        /* Slate 100 */
+        --ps-text-muted: #94A3B8;
+        /* Slate 400 */
+
+        --ps-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        --ps-shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+    }
+}
+
+/* =========================================
+   BASE BUTTON STYLES - Translucent & Airy
    ========================================= */
 
 .lpp-button-group {
     display: inline-flex;
     position: relative;
     align-items: center;
-    border-radius: 8px;
-    /* Slightly tighter radius */
-    background: #1e1e2e;
-    /* Fallback dark bg */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border-radius: var(--ps-radius-sm);
+    /* Translucent blue tint - not solid */
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    color: var(--ps-primary);
     transition: all 0.2s ease;
     z-index: 10000;
     margin: 4px;
     height: 36px;
+    font-family: var(--ps-font);
 }
 
-/* Base Gradient for Default Theme */
-.lpp-button-group:not(.lpp-native-gemini) {
-    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
-    box-shadow:
-        0 2px 8px rgba(129, 140, 248, 0.4),
-        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+.lpp-button-group:hover {
+    background: var(--ps-primary);
+    border-color: var(--ps-primary);
+    color: #FFFFFF;
+}
+
+.lpp-button-group:active {
+    transform: scale(0.98);
 }
 
 /* Shared Button Reset */
 .lpp-button-group button {
     all: unset;
     cursor: pointer;
-    color: white;
+    color: inherit;
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    transition: background 0.1s;
+    transition: all 0.2s ease;
     box-sizing: border-box;
+    font-family: var(--ps-font);
 }
 
 /* Main Action Button */
 .lpp-polish-action {
-    padding: 0 10px;
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
+    padding: 0 12px;
+    border-top-left-radius: var(--ps-radius-sm);
+    border-bottom-left-radius: var(--ps-radius-sm);
     font-size: 14px;
-    font-weight: 500;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 400;
     gap: 6px;
 }
 
@@ -60,17 +130,15 @@
 
 /* Dropdown Trigger */
 .lpp-dropdown-trigger {
-    padding: 0 6px;
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
-    /* Separator */
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
+    padding: 0 8px;
+    border-left: 1px solid rgba(14, 165, 233, 0.2);
+    border-top-right-radius: var(--ps-radius-sm);
+    border-bottom-right-radius: var(--ps-radius-sm);
     font-size: 10px;
 }
 
-.lpp-dropdown-trigger:hover,
-.lpp-polish-action:hover {
-    background: rgba(255, 255, 255, 0.15);
+.lpp-button-group:hover .lpp-dropdown-trigger {
+    border-left-color: rgba(255, 255, 255, 0.3);
 }
 
 /* =========================================
@@ -79,49 +147,36 @@
 
 .lpp-button-group.lpp-native-gemini {
     background: transparent;
+    border: none;
     box-shadow: none;
-    color: #444746;
-    /* Gemini Dark Text */
+    color: var(--ps-text-muted);
     height: 40px;
-    /* Match standard toolbar height */
     margin: 0 4px;
-    /* Tight spacing in toolbar */
     border-radius: 20px;
-    /* Pill shape */
 }
 
-/* Dark mode detection for Gemini (approximation) */
-@media (prefers-color-scheme: dark) {
-    .lpp-button-group.lpp-native-gemini {
-        color: #e3e3e3;
-    }
+.lpp-button-group.lpp-native-gemini:hover {
+    background: var(--ps-surface);
+    color: var(--ps-primary);
 }
 
 .lpp-button-group.lpp-native-gemini button {
     color: inherit;
-    border-radius: 0;
 }
 
 .lpp-button-group.lpp-native-gemini .lpp-polish-action {
-    border-top-left-radius: 20px;
-    border-bottom-left-radius: 20px;
+    border-radius: 20px 0 0 20px;
     padding-left: 12px;
 }
 
 .lpp-button-group.lpp-native-gemini .lpp-dropdown-trigger {
-    border-top-right-radius: 20px;
-    border-bottom-right-radius: 20px;
+    border-radius: 0 20px 20px 0;
     padding-right: 8px;
-    border-left: 1px solid rgba(128, 128, 128, 0.2);
-}
-
-.lpp-button-group.lpp-native-gemini:hover {
-    background: rgba(128, 128, 128, 0.1);
-    /* Subtle hover bg */
+    border-left: 1px solid var(--ps-border);
 }
 
 /* =========================================
-   DROPDOWN MENU
+   DROPDOWN MENU - "The Sheet"
    ========================================= */
 
 .lpp-dropdown-menu {
@@ -129,30 +184,40 @@
     top: 100%;
     right: 0;
     margin-top: 8px;
-    background: #1e1e2e;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 4px;
-    min-width: 180px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    /* Paper-like: semi-transparent white with blur */
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid #F1F5F9;
+    border-radius: var(--ps-radius);
+    padding: 6px;
+    min-width: 200px;
+    /* Diffuse, wide shadow */
+    box-shadow: var(--ps-shadow-lg);
     display: none;
     flex-direction: column;
     gap: 2px;
     z-index: 10001;
     overflow: hidden;
     animation: lpp-fade-in 0.15s ease-out;
+    font-family: var(--ps-font);
+}
+
+/* Dark mode dropdown */
+@media (prefers-color-scheme: dark) {
+    .lpp-dropdown-menu {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: var(--ps-border);
+    }
 }
 
 /* Portal Override */
 .lpp-dropdown-menu.lpp-dropdown-portal {
     position: fixed;
-    /* JS sets top/left */
     margin-top: 0;
     right: auto;
     display: flex;
-    /* Force show */
     z-index: 999999;
-    /* Ensure on top of everything */
 }
 
 .lpp-button-group.open .lpp-dropdown-menu:not(.lpp-dropdown-portal) {
@@ -162,67 +227,70 @@
 .lpp-dropdown-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--ps-radius-sm);
     cursor: pointer;
-    color: #f1f5f9;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--ps-text-main);
     font-size: 13px;
-    transition: background 0.1s;
+    font-weight: 400;
+    transition: all 0.15s ease;
 }
 
 .lpp-dropdown-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--ps-primary-subtle);
+    color: var(--ps-primary);
 }
 
 .lpp-dropdown-item.selected {
-    background: rgba(129, 140, 248, 0.2);
-    color: #a78bfa;
+    background: var(--ps-primary-subtle);
+    color: var(--ps-primary);
 }
 
 .lpp-item-icon {
     font-size: 16px;
     width: 20px;
     text-align: center;
+    flex-shrink: 0;
+    color: var(--ps-text-muted);
+}
+
+.lpp-dropdown-item:hover .lpp-item-icon,
+.lpp-dropdown-item.selected .lpp-item-icon {
+    color: var(--ps-primary);
 }
 
 /* =========================================
    STATES (Loading, Success, Error)
    ========================================= */
 
-/* Loading Pulse */
+/* Shimmer Loading Animation */
 .lpp-button-group.lpp-loading {
     pointer-events: none;
-    opacity: 0.8;
 }
 
 .lpp-button-group.lpp-loading .lpp-icon {
-    animation: lpp-pulse-fade 2s ease-in-out infinite;
-    display: inline-block;
+    background: linear-gradient(90deg, transparent 0%, rgba(14, 165, 233, 0.3) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: lpp-shimmer 1.5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
 }
 
-@keyframes lpp-pulse-fade {
+@keyframes lpp-shimmer {
     0% {
-        opacity: 0.4;
-        transform: scale(0.95);
-    }
-
-    50% {
-        opacity: 1;
-        transform: scale(1);
+        background-position: 200% 0;
     }
 
     100% {
-        opacity: 0.4;
-        transform: scale(0.95);
+        background-position: -200% 0;
     }
 }
 
 @keyframes lpp-fade-in {
     from {
         opacity: 0;
-        transform: translateY(-5px);
+        transform: translateY(-4px);
     }
 
     to {
@@ -231,24 +299,31 @@
     }
 }
 
-/* Success Flash */
-.lpp-button-group.lpp-success:not(.lpp-native-gemini) {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+/* Success State - Soft Mint */
+.lpp-button-group.lpp-success {
+    background: rgba(45, 212, 191, 0.15);
+    border-color: rgba(45, 212, 191, 0.3);
+    color: var(--ps-success);
+    animation: lpp-success-glow 1s ease;
 }
 
-.lpp-button-group.lpp-success.lpp-native-gemini .lpp-polish-action {
-    color: #16a34a;
-    /* Green text for success on native */
+@keyframes lpp-success-glow {
+
+    0%,
+    100% {
+        box-shadow: none;
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.2);
+    }
 }
 
-/* Error Flash */
-.lpp-button-group.lpp-error:not(.lpp-native-gemini) {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-}
-
-.lpp-button-group.lpp-error.lpp-native-gemini .lpp-polish-action {
-    color: #ef4444;
-    /* Red text for error on native */
+/* Error State - Pale Rose */
+.lpp-button-group.lpp-error {
+    background: rgba(251, 113, 133, 0.15);
+    border-color: rgba(251, 113, 133, 0.3);
+    color: var(--ps-error);
 }
 
 /* =========================================
@@ -259,41 +334,43 @@
     position: fixed;
     bottom: 24px;
     right: 24px;
-    padding: 12px 20px;
-    background: #1e1e2e;
-    color: #f1f5f9;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 14px 20px;
+    background: var(--ps-bg);
+    color: var(--ps-text-main);
+    font-family: var(--ps-font);
     font-size: 14px;
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    font-weight: 400;
+    border-radius: var(--ps-radius);
+    box-shadow: var(--ps-shadow-lg);
     z-index: 100000;
     display: flex;
     align-items: center;
     gap: 10px;
-    animation: lpp-slide-in 0.3s ease;
+    animation: lpp-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid var(--ps-border);
 }
 
 .lpp-status-popup.lpp-success {
-    border-left: 4px solid #22c55e;
+    border-left: 4px solid var(--ps-success);
 }
 
 .lpp-status-popup.lpp-error {
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid var(--ps-error);
 }
 
 .lpp-status-popup.lpp-info {
-    border-left: 4px solid #818cf8;
+    border-left: 4px solid var(--ps-primary);
 }
 
 @keyframes lpp-slide-in {
     from {
         opacity: 0;
-        transform: translateX(20px);
+        transform: translateX(20px) translateY(10px);
     }
 
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateX(0) translateY(0);
     }
 }
 
@@ -311,4 +388,36 @@
 
 .lpp-status-popup.lpp-hiding {
     animation: lpp-slide-out 0.3s ease forwards;
+}
+
+/* =========================================
+   TOOLTIP (Soft, not harsh black)
+   ========================================= */
+
+.lpp-tooltip {
+    position: fixed;
+    background: var(--ps-text-main);
+    color: var(--ps-bg);
+    padding: 8px 12px;
+    border-radius: var(--ps-radius-sm);
+    font-family: var(--ps-font);
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 200px;
+    z-index: 100001;
+    pointer-events: none;
+    box-shadow: var(--ps-shadow);
+    animation: lpp-tooltip-in 0.1s ease-out;
+}
+
+@keyframes lpp-tooltip-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }

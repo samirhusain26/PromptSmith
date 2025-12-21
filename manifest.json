@@ -1,13 +1,12 @@
 {
     "manifest_version": 3,
     "name": "PromptSmith",
-    "version": "1.0",
+    "version": "1.1",
     "description": "Polish your prompts with AI. Uses Gemini Nano locally, or falls back to Gemini Flash cloud API. Works on ChatGPT, Claude, & Gemini.",
     "author": "PromptSmith",
     "permissions": [
         "storage",
-        "activeTab",
-        "unlimitedStorage"
+        "activeTab"
     ],
     "host_permissions": [
         "https://chat.openai.com/*",
@@ -17,7 +16,7 @@
         "https://generativelanguage.googleapis.com/*"
     ],
     "content_security_policy": {
-        "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://cdn-lfs-us-1.hf.co https://cas-bridge.xethub.hf.co https://mlc.ai https://raw.githubusercontent.com https://cdn.jsdelivr.net"
+        "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com"
     },
     "background": {
         "service_worker": "background.js",
@@ -49,5 +48,18 @@
         "16": "icons/icon.png",
         "48": "icons/icon.png",
         "128": "icons/icon.png"
-    }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "prompts.js"
+            ],
+            "matches": [
+                "https://chat.openai.com/*",
+                "https://chatgpt.com/*",
+                "https://claude.ai/*",
+                "https://gemini.google.com/*"
+            ]
+        }
+    ]
 }
