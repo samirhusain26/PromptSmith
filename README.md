@@ -184,6 +184,9 @@ The button adapts its styling to look native on each platform:
 4. (Optional) Click the dropdown arrow to select a different persona
 5. Your prompt is instantly refined!
 
+> [!TIP]
+> You can customize **any** persona (not just 'Custom') by editing the system prompt in the Extension Settings. Your changes will be saved specifically for that persona.
+
 ### Button States
 
 | State | Appearance | Meaning |
@@ -286,6 +289,7 @@ The Meta Prompt prevents the AI from accidentally answering the user's question 
 | `document.execCommand` | React-compatible text replacement |
 | `chrome.storage.sync` | Cross-device settings synchronization |
 | `Portal Pattern` | Dropdown rendering outside overflow containers |
+| `Gemini 2.0 Flash` | High-speed cloud model |
 
 ### Message Flow
 

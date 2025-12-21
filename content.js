@@ -790,27 +790,8 @@
         iconSpan.className = 'lpp-icon';
 
         // Use SVG for ChatGPT, Emoji for others (unless we want to unify)
-        if (currentSite === 'chatgpt') {
-            iconSpan.innerHTML = ICONS.sparkle;
-        } else {
-            // Resolve system instruction
-            let systemInstruction = PERSONAS[currentPersona].instruction;
-
-            // For any persona, check if there's a custom override
-            if (customPersonaPrompts[currentPersona]) {
-                systemInstruction = customPersonaPrompts[currentPersona];
-            }
-
-            // Handle the '[CUSTOM_PROMPT_PLACEHOLDER]' case
-            if (systemInstruction === '[CUSTOM_PROMPT_PLACEHOLDER]') {
-                // This part of the code is for button creation, not action execution.
-                // The actual check and status display should happen in handlePolishClick.
-                // For now, just ensure the icon is set.
-                iconSpan.textContent = PERSONAS[currentPersona].icon;
-            } else {
-                iconSpan.textContent = PERSONAS[currentPersona].icon;
-            }
-        }
+        // Always use the persona icon (emoji) for consistency across all sites
+        iconSpan.textContent = PERSONAS[currentPersona].icon;
 
         // Label (optional, hidden on some layouts)
         const labelSpan = document.createElement('span');
@@ -944,6 +925,7 @@
         if (!form) return null;
 
         // Strategy A: Find the send button (robust selectors)
+        // Note: Send button might not be present when input is empty
         const sendBtn = form.querySelector('button[data-testid="send-button"], button[aria-label="Send prompt"], button[aria-label="Stop generating"]');
         if (sendBtn) {
             // Usually buttons are in a flex div.
@@ -974,19 +956,29 @@
             return sendBtn.parentElement;
         }
 
-        // Strategy B: Mic button (Voice mode)
-        const micBtn = form.querySelector('button[aria-label*="Use microphone"]');
-        if (micBtn && micBtn.parentElement) {
-            // Often mic button is in the same toolbar wrapper
+        // Strategy B: Mic/Voice buttons (Voice mode) - Updated for 2025
+        const micBtn = form.querySelector('button[aria-label*="Use microphone"], button[aria-label="Dictate button"], button[aria-label="Start voice mode"]');
+        if (micBtn) {
+            let parent = micBtn.parentElement;
+            // Traverse up to find the flex container row
+            // We expect a container with display: flex that holds the button group
+            for (let i = 0; i < 3; i++) {
+                if (!parent) break;
+                const style = window.getComputedStyle(parent);
+                if (style.display === 'flex' || style.display === 'inline-flex') {
+                    return parent;
+                }
+                parent = parent.parentElement;
+            }
+            // Fallback to direct parent if traversal fails
             return micBtn.parentElement;
         }
 
         // Strategy C: Attachment button (often on the left)
+        // This is less ideal as we want to be on the right, but useful as a fallback anchor
         const attachBtn = form.querySelector('button[aria-label*="Attach file"]');
         if (attachBtn) {
-            // We want the right side, so this might be tricky if they are split.
-            // But usually they are all in one big footer container. 
-            // Ideally we want to be near Send.
+            // Try to find the common parent if we can't find the right side
         }
 
         return null;
@@ -1298,11 +1290,9 @@
         customPersonaPrompts = storage.customPersonaPrompts || {};
         console.log('[PromptSmith] Loaded custom prompts for personas:', Object.keys(customPersonaPrompts));
 
-        // Load active persona from storage, default to 'polisher'
-        if (storage.activePersona && PERSONAS[storage.activePersona]) {
-            currentPersona = storage.activePersona;
-            console.log('[PromptSmith] Loaded active persona from storage:', currentPersona);
-        }
+        // Default to 'polisher' on load, ignoring previous session state per user request.
+        // We do typically sync activePersona, but on fresh page load we want to reset to Polisher.
+        console.log('[PromptSmith] Defaulting active persona to:', currentPersona);
 
         if (enabledSites[currentSite] === false) {
             console.log(`[PromptSmith] ${currentSite} is disabled in settings. Skipping injection.`);
