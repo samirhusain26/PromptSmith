@@ -10,7 +10,7 @@
 
 // Import dependencies as modules
 import { AIService } from './ai_service.js';
-import { DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONA } from './constants.js';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONA, DEFAULT_CLOUD_PROVIDER, DEFAULT_GEMINI_MODEL, DEFAULT_GROQ_MODEL } from './constants.js';
 import { PERSONAS } from './prompts.js';
 
 // Attach services to global scope for debugging/interaction if needed
@@ -59,7 +59,11 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Set default settings
     chrome.storage.sync.set({
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      aiMode: 'auto', // Default to auto mode
+      aiMode: 'cloud', // Default to cloud mode (Strict Mode)
+      cloudProvider: DEFAULT_CLOUD_PROVIDER,
+      geminiModel: DEFAULT_GEMINI_MODEL,
+      groqModel: DEFAULT_GROQ_MODEL,
+      cloudModel: DEFAULT_GEMINI_MODEL, // Unified model key tracker
       hasCompletedOnboarding: false // Track onboarding state
     }, () => {
       console.log('[PromptSmith] Default settings initialized');
@@ -130,11 +134,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 async function handleGetAIMode(sendResponse) {
   try {
-    const storage = await chrome.storage.sync.get(['geminiApiKey']);
-    const apiKey = storage.geminiApiKey || null;
-
     if (self.AIService && self.AIService.getAIMode) {
-      const mode = await self.AIService.getAIMode(apiKey);
+      // No need to pass apiKey, AIService reads from storage directly now
+      const mode = await self.AIService.getAIMode();
       sendResponse(mode);
     } else {
       sendResponse({

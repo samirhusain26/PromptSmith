@@ -4,7 +4,7 @@
 
 PromptSmith is a Chrome Extension that intelligently polishes your prompts before you send them to AI agents like ChatGPT, Claude, or Gemini.
 
-It features a **Smart AI Mode** that automatically chooses the best privacy/performance balance:
+It features a **Smart AI Mode** that automatically chooses the best privacy/performance balance by default (you can also manually lock it to Cloud or Local mode):
 1. **Cloud Speed**: Uses your API keys (Gemini or Groq) for instant results.
 2. **Local Privacy**: Falls back to **Gemini Nano** (built into Chrome) for 100% on-device processing if no key is found.
 
@@ -79,6 +79,7 @@ The extension uses a "Smart Mode" logic to determine how to process your prompt:
   - `Llama 3.3 70B Versatile` (Smartest Open Source)
   - `Llama 3.1 8B Instant` (Fastest)
   - `GPT-OSS 120B` (High reasoning)
+  - `GPT-OSS 20B` (Efficient Mid-Range)
 
 ---
 
@@ -108,6 +109,8 @@ PromptSmith offers 4 specialized personas for different prompt transformation ne
 
 ### 2. Configure Local AI (Privacy Mode)
 *Requires Chrome 128+ on Desktop (Mac/Windows/Linux).*
+
+**Note**: The PromptSmith Options page now includes helpful **Copy** buttons next to these URLs for easy setup.
 
 1. **Enable Flags**: Go to `chrome://flags` and set:
    - `Optimization Guide On Device Model`: **Enabled BypassPerfRequirement**
