@@ -1620,8 +1620,7 @@
           <h4>Local (Nano) Setup</h4>
           <p>Privacy-first option. Runs offline in Chrome.</p>
           <ol>
-            <li>Open <code>chrome://flags</code> <button class="copy-btn"
-                onclick="navigator.clipboard.writeText('chrome://flags'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
+            <li>Open <code>chrome://flags</code> <button class="copy-btn copy-url-btn" data-copy="chrome://flags"
                 title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                   fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1630,10 +1629,10 @@
             <li>Enable <code>Optimization Guide On Device Model</code></li>
             <li>Enable <code>Prompt API for Gemini Nano</code></li>
             <li>Relaunch Chrome.</li>
-            <li>Open <code>chrome://components</code> <button class="copy-btn"
-                onclick="navigator.clipboard.writeText('chrome://components'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
-                title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <li>Open <code>chrome://components</code> <button class="copy-btn copy-url-btn"
+                data-copy="chrome://components" title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14"
+                  height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"
+                  stroke-linejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg></button> and check for updates to "Optimization Guide On Device Model".
@@ -1849,7 +1848,7 @@
         <span>About the Developer</span>
 
       </a>
-      <span style="color: var(--text-secondary); font-size: 0.9rem;">PromptSmith v1.1</span>
+      <span style="color: var(--text-secondary); font-size: 0.9rem;">PromptSmith v1.2</span>
     </div>
   </div>
 

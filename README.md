@@ -1,4 +1,4 @@
-# ✨ PromptSmith v1.1
+# ✨ PromptSmith v1.2
 
 > **Privacy-first AI prompt refinement for Chrome.**
 

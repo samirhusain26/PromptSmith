@@ -1170,6 +1170,13 @@ let detectedFeatures = {
     hasApiKey: false
 };
 
+// Track temporary onboarding state
+let onboardingState = {
+    provider: 'groq', // Default
+    apiKey: '',
+    model: ''
+};
+
 /**
  * Show the onboarding overlay
  */
@@ -1237,19 +1244,19 @@ function renderStepContent(stepId) {
                     </p>
                     <div class="feature-grid">
                         <div class="feature-card">
-                            <div class="feature-icon">🔐</div>
-                            <div class="feature-title">Privacy First</div>
-                            <div class="feature-desc">Your prompts stay on your device when possible</div>
+                            <div class="feature-icon">🧠</div>
+                            <div class="feature-title">Smart AI Mode</div>
+                            <div class="feature-desc">Auto-switches: Cloud API for speed, Local Nano for privacy.</div>
                         </div>
                         <div class="feature-card">
+                            <div class="feature-icon">☁️</div>
+                            <div class="feature-title">Multi-Provider</div>
+                            <div class="feature-desc">Support for Google Gemini and Groq Cloud APIs.</div>
+                        </div>
+                         <div class="feature-card">
                             <div class="feature-icon">⚡</div>
-                            <div class="feature-title">2-Tier AI</div>
-                            <div class="feature-desc">Cloud → Local Nano fallback</div>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🎭</div>
-                            <div class="feature-title">4 Personas</div>
-                            <div class="feature-desc">Polisher, Developer, Thinker, Custom</div>
+                            <div class="feature-title">Local Fallback</div>
+                            <div class="feature-desc">Works offline with Chrome's built-in Gemini Nano.</div>
                         </div>
                     </div>
                 </div>
@@ -1257,25 +1264,81 @@ function renderStepContent(stepId) {
             break;
 
         case 'setup':
+            // Determine labels based on current selection (defaulting to groq if not set)
+            const isGroq = onboardingState.provider === 'groq';
+            const apiKeyPlaceholder = isGroq ? 'gsk_...' : 'AIza...';
+            const keyLink = isGroq ? 'https://console.groq.com/keys' : 'https://aistudio.google.com/app/apikey';
+            const linkText = isGroq ? 'Groq Console' : 'Google AI Studio';
+
             html = `
                 <div class="step-content">
-                    <h2 class="step-title">Configure Your AI Provider</h2>
+                    <h2 class="step-title">Configure Your Cloud AI</h2>
                     <p class="step-subtitle">
-                        Enter your Google AI API key to enable Gemini Flash. This is the fastest and most reliable option.
+                        Choose your preferred Cloud AI provider for the fastest and most reliable experience.
                     </p>
+                    
                     <div class="setup-input-group">
-                        <label for="onboarding-api-key">Google AI API Key</label>
-                        <input type="password" id="onboarding-api-key" placeholder="AIza..." spellcheck="false">
-                        <p class="setup-hint">
-                            Get a free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                        <label for="onboarding-provider">Cloud Provider</label>
+                        <select id="onboarding-provider" class="dropdown-select" style="margin-bottom: 1rem;">
+                            <option value="groq" ${isGroq ? 'selected' : ''}>Groq (Free, No Card)</option>
+                            <option value="gemini" ${!isGroq ? 'selected' : ''}>Gemini (Free, May Need Card)</option>
+                        </select>
+                    </div>
+
+                    <div class="setup-input-group">
+                        <label for="onboarding-api-key">API Key</label>
+                        <input type="password" id="onboarding-api-key" placeholder="${apiKeyPlaceholder}" value="${onboardingState.apiKey}" spellcheck="false">
+                        <p class="setup-hint" id="api-key-hint">
+                            Get a free API key from <a href="${keyLink}" target="_blank" id="api-key-link">${linkText}</a>
                         </p>
                     </div>
+
                     <div class="recommendation-box" style="margin-top: 1rem;">
-                        <h4>💡 Prefer On-Device AI?</h4>
-                        <p>In the next step, you can also enable <strong>Gemini Nano</strong> for 100% local, on-device processing—no API key required!</p>
+                        <h4>ℹ️ Getting an API Key</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 1.25rem; margin-top: 0.5rem;">
+                            <li id="groq-note" style="${isGroq ? '' : 'display:none;'}"><strong>Groq:</strong> Requires an account, but <strong>NO credit card</strong> is needed.</li>
+                            <li id="gemini-note" style="${!isGroq ? '' : 'display:none;'}"><strong>Gemini:</strong> Requires a Google cloud account and <strong>may ask for a credit card</strong> verification.</li>
+                        </ul>
                     </div>
                 </div>
             `;
+            setTimeout(() => {
+                // Add event listener to update UI when provider changes
+                const providerSelect = document.getElementById('onboarding-provider');
+                const apiKeyInput = document.getElementById('onboarding-api-key');
+                const apiKeyLink = document.getElementById('api-key-link');
+                const groqNote = document.getElementById('groq-note');
+                const geminiNote = document.getElementById('gemini-note');
+
+                if (providerSelect) {
+                    providerSelect.addEventListener('change', (e) => {
+                        const provider = e.target.value;
+                        onboardingState.provider = provider;
+
+                        // Update UI
+                        if (provider === 'groq') {
+                            apiKeyInput.placeholder = 'gsk_...';
+                            apiKeyLink.href = 'https://console.groq.com/keys';
+                            apiKeyLink.textContent = 'Groq Console';
+                            groqNote.style.display = 'list-item';
+                            geminiNote.style.display = 'none';
+                        } else {
+                            apiKeyInput.placeholder = 'AIza...';
+                            apiKeyLink.href = 'https://aistudio.google.com/app/apikey';
+                            apiKeyLink.textContent = 'Google AI Studio';
+                            groqNote.style.display = 'none';
+                            geminiNote.style.display = 'list-item';
+                        }
+                    });
+                }
+
+                // Track input
+                if (apiKeyInput) {
+                    apiKeyInput.addEventListener('input', (e) => {
+                        onboardingState.apiKey = e.target.value;
+                    });
+                }
+            }, 0);
             break;
 
         case 'nano':
@@ -1283,14 +1346,14 @@ function renderStepContent(stepId) {
                 <div class="step-content">
                     <h2 class="step-title">Enable Gemini Nano (Optional)</h2>
                     <p class="step-subtitle">
-                        Run AI completely on your device for maximum privacy. Requires Chrome 128+ on supported hardware.
+                        Run AI completely on your device using Chrome's built-in model. Great for privacy and offline use.
                     </p>
                     <div class="nano-setup-steps">
                         <div class="nano-step">
                             <div class="nano-step-number">1</div>
                             <div class="nano-step-content">
                                 <h4>Enable Chrome Flags</h4>
-                                <p>Open <code>chrome://flags</code> in a new tab and enable:</p>
+                                <p>Open <code>chrome://flags</code> <button class="copy-btn nano-copy-btn" data-copy="chrome://flags" title="Copy URL">📋</button></p>
                                 <ul class="nano-flags-list">
                                     <li><code>#optimization-guide-on-device-model</code> → <strong>Enabled BypassPerfRequirement</strong></li>
                                     <li><code>#prompt-api-for-gemini-nano</code> → <strong>Enabled</strong></li>
@@ -1308,17 +1371,33 @@ function renderStepContent(stepId) {
                             <div class="nano-step-number">3</div>
                             <div class="nano-step-content">
                                 <h4>Download the Model</h4>
-                                <p>Go to <code>chrome://components</code>, find <strong>"Optimization Guide On Device Model"</strong>, and click <strong>"Check for update"</strong>.</p>
-                                <p class="nano-note">⏳ Download is ~1.7GB. Wait for the version to change from <code>0.0.0.0</code>.</p>
+                                <p>Go to <code>chrome://components</code> <button class="copy-btn nano-copy-btn" data-copy="chrome://components" title="Copy URL">📋</button></p>
+                                <p>Find <strong>"Optimization Guide On Device Model"</strong> and click <strong>"Check for update"</strong>.</p>
+                                <p class="nano-note">⏳ Download is ~1.7GB. Wait for version to change from <code>0.0.0.0</code>.</p>
                             </div>
                         </div>
                     </div>
-                    <div class="recommendation-box" style="margin-top: 1rem;">
-                        <h4>ℹ️ Already have an API key?</h4>
-                        <p>You can skip this step! Gemini Nano is optional and serves as a privacy-focused fallback when the API is unavailable.</p>
-                    </div>
                 </div>
             `;
+            setTimeout(() => {
+                const copyBtns = document.querySelectorAll('.nano-copy-btn');
+                copyBtns.forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const text = btn.dataset.copy;
+                        if (text) {
+                            try {
+                                await navigator.clipboard.writeText(text);
+                                const originalText = btn.innerHTML;
+                                btn.innerHTML = '✓';
+                                setTimeout(() => btn.innerHTML = originalText, 1500);
+                            } catch (err) {
+                                console.error('Failed to copy:', err);
+                                btn.classList.add('copy-error'); // Optional: Add error styling
+                            }
+                        }
+                    });
+                });
+            }, 0);
             break;
 
         case 'demo':
@@ -1370,35 +1449,6 @@ function renderStepContent(stepId) {
 }
 
 /**
- * Get recommendation text based on detected features
- */
-function getRecommendation() {
-    if (detectedFeatures.hasApiKey) {
-        return 'Great! You already have an API key configured. Gemini Flash will be your primary AI provider for fast, reliable polishing.';
-    } else if (detectedFeatures.geminiNano.available) {
-        return 'Gemini Nano is available! You can use the extension right away. Adding an API key will enable faster cloud processing as the primary option.';
-    } else {
-        return 'We recommend setting up a Gemini Flash API key in the next step. It\'s free and provides the best experience when local AI is unavailable.';
-    }
-}
-
-/**
- * Run feature detection
- */
-async function runFeatureDetection() {
-    // Check Gemini Nano
-    const nanoStatus = await checkLocalAIAvailability();
-    detectedFeatures.geminiNano = {
-        available: nanoStatus.available,
-        status: nanoStatus.status
-    };
-
-    // Check for existing API key
-    const storage = await chrome.storage.sync.get(['geminiApiKey']);
-    detectedFeatures.hasApiKey = storage.geminiApiKey && storage.geminiApiKey.trim().length > 0;
-}
-
-/**
  * Handle next step navigation
  */
 async function handleNextStep() {
@@ -1407,18 +1457,46 @@ async function handleNextStep() {
     // Handle setup step - save API key if entered
     if (currentStepId === 'setup') {
         const apiKeyInput = document.getElementById('onboarding-api-key');
+        const providerSelect = document.getElementById('onboarding-provider');
+
         const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+        const provider = providerSelect ? providerSelect.value : 'gemini';
+
+        // Update temp state
+        onboardingState.apiKey = apiKey;
+        onboardingState.provider = provider;
 
         if (apiKey) {
-            // Validate and save API key
-            if (!apiKey.startsWith('AIza')) {
-                // Show error in the input
-                apiKeyInput.style.borderColor = 'var(--error)';
+            // Validate key format based on provider
+            let isValid = true;
+            if (provider === 'gemini' && !apiKey.startsWith('AIza')) {
+                isValid = false;
                 apiKeyInput.placeholder = 'Invalid format - keys start with AIza...';
+            } else if (provider === 'groq' && !apiKey.startsWith('gsk_')) {
+                // Warn but maybe allow? For now strict like options.
+                isValid = false;
+                apiKeyInput.placeholder = 'Invalid format - keys start with gsk_...';
+            }
+
+            if (!isValid) {
+                apiKeyInput.style.borderColor = 'var(--error)';
                 return;
             }
 
-            await chrome.storage.sync.set({ geminiApiKey: apiKey });
+            // Save to storage
+            const saveData = {
+                cloudProvider: provider,
+                aiMode: 'cloud' // Default mode to cloud if key provided
+            };
+
+            if (provider === 'gemini') {
+                saveData.geminiApiKey = apiKey;
+            } else {
+                saveData.groqApiKey = apiKey;
+                // saveData.groqModel = DEFAULT_GROQ_MODEL; // Let options init handle default
+            }
+
+            await chrome.storage.sync.set(saveData);
             detectedFeatures.hasApiKey = true;
         }
     }
@@ -1521,4 +1599,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup listeners
     setupSiteToggles();
     setupAIModeToggle();
+    setupCopyButtons();
 });
+
+/**
+ * Setup copy buttons for the "How It Works" section
+ */
+function setupCopyButtons() {
+    const copyBtns = document.querySelectorAll('.copy-url-btn');
+
+    copyBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const text = btn.dataset.copy;
+            if (!text) return;
+
+            try {
+                await navigator.clipboard.writeText(text);
+
+                // Visual feedback
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '✓';
+                btn.classList.add('copied');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.remove('copied');
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                // Fallback or error indication could go here
+            }
+        });
+    });
+}
