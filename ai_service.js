@@ -6,7 +6,7 @@
  * Priority 2: Local (Gemini Nano via LanguageModel API)
  */
 
-import { GEMINI_API_ENDPOINT } from './constants.js';
+import { GEMINI_API_BASE_URL, DEFAULT_GEMINI_MODEL, GROQ_API_ENDPOINT, DEFAULT_GROQ_MODEL } from './constants.js';
 import { META_PROMPT } from './prompts.js';
 
 // Cache for AI session
@@ -237,10 +237,11 @@ ${META_PROMPT}`;
  * @param {string} userPrompt - The user's input text to polish
  * @param {string} systemInstruction - The system instruction for polishing
  * @param {string} apiKey - The user's Google Gemini API key
+ * @param {string} model - The Gemini model to use (e.g., 'gemini-2.5-flash-preview-05-20')
  * @returns {Promise<string>} - The polished text
  */
-async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
-    console.log('[AI Service] Sending prompt to cloud AI (Gemini Flash)...');
+async function generateWithCloudAI(userPrompt, systemInstruction, apiKey, model = DEFAULT_GEMINI_MODEL) {
+    console.log(`[AI Service] Sending prompt to cloud AI (Gemini - ${model})...`);
     console.log('[AI Service] Prompt length:', userPrompt.length, 'chars');
     console.log('[AI Service] System instruction length:', systemInstruction.length, 'chars');
 
@@ -270,8 +271,9 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
     };
 
     try {
-        const fullUrl = `${GEMINI_API_ENDPOINT}?key=${apiKey}`;
-        const maskedUrl = `${GEMINI_API_ENDPOINT}?key=${apiKey.substring(0, 8)}...`;
+        const apiEndpoint = `${GEMINI_API_BASE_URL}/${model}:generateContent`;
+        const fullUrl = `${apiEndpoint}?key=${apiKey}`;
+        const maskedUrl = `${apiEndpoint}?key=${apiKey.substring(0, 8)}...`;
         console.log('[AI Service] Making request to:', maskedUrl);
         console.log('[AI Service] Request body:', JSON.stringify(requestBody, null, 2).substring(0, 500) + '...');
 
@@ -382,6 +384,102 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
 }
 
 // ============================================================
+// GROQ AI FUNCTIONS
+// ============================================================
+
+/**
+ * Generate text using Groq API
+ * @param {string} userPrompt - The user's input text to polish
+ * @param {string} systemInstruction - The system instruction for polishing
+ * @param {string} apiKey - The user's Groq API key
+ * @param {string} model - The Groq model to use
+ * @returns {Promise<string>} - The polished text
+ */
+async function generateWithGroqAI(userPrompt, systemInstruction, apiKey, model = DEFAULT_GROQ_MODEL) {
+    console.log(`[AI Service] Sending prompt to Groq AI (Model: ${model})...`);
+    console.log('[AI Service] Prompt length:', userPrompt.length, 'chars');
+
+    const requestBody = {
+        messages: [
+            {
+                role: "system",
+                content: `${systemInstruction}\n${META_PROMPT}`
+            },
+            {
+                role: "user",
+                content: `--- USER INPUT TO REWRITE ---\n${userPrompt}\n--- END USER INPUT ---`
+            }
+        ],
+        model: model,
+        temperature: 0.7,
+        max_tokens: 2048
+    };
+
+    try {
+        const response = await fetch(GROQ_API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        console.log('[AI Service] Groq Response status:', response.status);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+            console.error('[AI Service] Groq AI Error:', errorMessage);
+
+            if (response.status === 401) {
+                throw new Error('Invalid Groq API key');
+            } else if (response.status === 429) {
+                throw new Error('Groq rate limit exceeded');
+            } else {
+                throw new Error(`Groq AI error: ${errorMessage}`);
+            }
+        }
+
+        const data = await response.json();
+
+        const text = data.choices?.[0]?.message?.content;
+        if (!text) {
+            throw new Error('Empty response from Groq AI');
+        }
+
+        return text;
+
+    } catch (error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw new Error('Network error. Please check your internet connection.');
+        }
+        throw error;
+    }
+}
+
+const PROVIDER_HANDLERS = {
+    'gemini': {
+        name: 'Gemini',
+        generate: async (userPrompt, systemInstruction, config) => {
+            if (!config.geminiApiKey || config.geminiApiKey.trim().length === 0) {
+                throw new Error('Gemini API Key missing');
+            }
+            return await generateWithCloudAI(userPrompt, systemInstruction, config.geminiApiKey, config.geminiModel);
+        }
+    },
+    'groq': {
+        name: 'Groq',
+        generate: async (userPrompt, systemInstruction, config) => {
+            if (!config.groqApiKey || config.groqApiKey.trim().length === 0) {
+                throw new Error('Groq API Key missing');
+            }
+            return await generateWithGroqAI(userPrompt, systemInstruction, config.groqApiKey, config.groqModel);
+        }
+    }
+};
+
+// ============================================================
 // UNIFIED API
 // ============================================================
 
@@ -392,10 +490,10 @@ async function generateWithCloudAI(userPrompt, systemInstruction, apiKey) {
  */
 async function getAIMode(apiKey = null) {
     // Get user preference
-    let preferredMode = 'hybrid';
+    let preferredMode = 'cloud';
     try {
         const storage = await chrome.storage.sync.get(['aiMode']);
-        preferredMode = storage.aiMode || 'hybrid';
+        preferredMode = storage.aiMode || 'cloud';
     } catch (e) {
         console.warn('Error reading aiMode config:', e);
     }
@@ -434,30 +532,21 @@ async function getAIMode(apiKey = null) {
         };
     }
 
-    // --- Mode: Hybrid (Default Fallback Chain) ---
-    // Priority 1: Cloud API (Gemini Flash)
-    if (apiKey && apiKey.trim().length > 0) {
-        return {
-            mode: 'cloud',
-            status: '☁️ Hybrid: Cloud Active',
-            details: 'Using Gemini Flash API. Falls back to Nano if unavailable.'
-        };
-    }
+    // --- Mode: Cloud Only (Groq) ---
+    // Note: Since we don't pass provider preference here yet, this logic is minimal.
+    // The main getAIMode will need to be updated to check config if we want specific status for Groq.
+    // For now, if we are in cloud mode, checking Gemini Key is the default behavior unless we update calls.
 
-    // Priority 2: Local Gemini Nano
-    if (localAvailability.available) {
-        return {
-            mode: 'local',
-            status: '⚡ Hybrid: Local Fallback',
-            details: 'Using on-device AI (no API key). Your prompts stay local.'
-        };
-    }
 
-    // Fallback if nothing available
+
+    // --- Mode: Hybrid (REMOVED) ---
+    // Strict Mode Enforcement
+
+    // Fallback if nothing matches (or if preferredMode was somehow hybrid)
     return {
         mode: 'none',
-        status: '⚠️ No AI Available',
-        details: localAvailability.reason || 'Configure options in Settings.'
+        status: '⚠️ Select AI Mode',
+        details: 'Please choose Local or Cloud in settings.'
     };
 }
 
@@ -476,21 +565,62 @@ async function generatePolishedText(userPrompt, systemInstruction) {
     console.log('[AI Service] Input prompt length:', userPrompt?.length || 0);
     console.log('[AI Service] System instruction length:', systemInstruction?.length || 0);
 
-    // Get configuration
     let preferredMode = 'hybrid';
-    let apiKey = null;
+    let cloudProvider = 'gemini';
+    let geminiApiKey = null;
+    let geminiModel = null;
+    let groqApiKey = null;
+    let groqModel = null;
 
     try {
-        const storage = await chrome.storage.sync.get(['geminiApiKey', 'aiMode']);
-        apiKey = storage.geminiApiKey;
-        preferredMode = storage.aiMode || 'hybrid';
+        const storage = await chrome.storage.sync.get(['geminiApiKey', 'groqApiKey', 'groqModel', 'cloudModel', 'aiMode', 'cloudProvider']);
+        geminiApiKey = storage.geminiApiKey;
+        groqApiKey = storage.groqApiKey;
+        // cloudModel is the unified model selection storage key
+        cloudProvider = storage.cloudProvider || 'gemini';
+
+        // Assign models based on active provider to avoid mixing them up
+        if (cloudProvider === 'gemini') {
+            geminiModel = storage.cloudModel || DEFAULT_GEMINI_MODEL;
+            groqModel = storage.groqModel || DEFAULT_GROQ_MODEL;
+        } else if (cloudProvider === 'groq') {
+            groqModel = storage.cloudModel || storage.groqModel || DEFAULT_GROQ_MODEL;
+            geminiModel = DEFAULT_GEMINI_MODEL;
+        } else {
+            geminiModel = DEFAULT_GEMINI_MODEL;
+            groqModel = DEFAULT_GROQ_MODEL;
+        }
+
+        preferredMode = storage.aiMode || 'cloud'; // Default to cloud if not set (safer default than hybrid now)
+
+        // Smart mode fallback: if no mode stored or legacy hybrid mode
+        if (!storage.aiMode || preferredMode === 'hybrid') {
+            // Check availability to determine mode
+            const localAvail = await checkLocalAIAvailability();
+            const hasApiKey = (geminiApiKey && geminiApiKey.trim().length > 0) ||
+                (groqApiKey && groqApiKey.trim().length > 0);
+
+            if (hasApiKey) {
+                preferredMode = 'cloud';
+            } else if (localAvail.available) {
+                preferredMode = 'local';
+            } else {
+                preferredMode = 'cloud'; // Default fallback
+            }
+            console.log('[AI Service] Smart mode fallback selected:', preferredMode);
+        }
 
         // Debug: Log API key status (safely)
-        console.log('[AI Service] API Key retrieved:', apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)} (${apiKey.length} chars)` : 'NOT SET');
+        console.log('[AI Service] Cloud Provider:', cloudProvider);
+        console.log('[AI Service] Gemini Model:', geminiModel);
+        console.log('[AI Service] Groq Model:', groqModel);
+        console.log('[AI Service] Gemini Key:', geminiApiKey ? 'SET' : 'NOT SET');
+        console.log('[AI Service] Groq Key:', groqApiKey ? 'SET' : 'NOT SET');
         console.log('[AI Service] Preferred mode:', preferredMode);
     } catch (error) {
         console.error('[AI Service] Error accessing storage:', error);
     }
+
 
     // --- Helper for execution ---
 
@@ -524,19 +654,28 @@ async function generatePolishedText(userPrompt, systemInstruction) {
     };
 
     const tryCloud = async () => {
-        console.log('[AI Service] tryCloud called, API key check:', apiKey ? 'PRESENT' : 'MISSING');
-        if (apiKey && apiKey.trim().length > 0) {
-            console.log('[AI Service] Attempting Cloud API with key:', apiKey.substring(0, 8) + '...');
-            console.log('[AI Service] Endpoint:', GEMINI_API_ENDPOINT);
-            const rawText = await generateWithCloudAI(userPrompt, systemInstruction, apiKey);
+        const handler = PROVIDER_HANDLERS[cloudProvider];
+
+        if (handler) {
+            console.log(`[AI Service] Using Cloud Provider: ${handler.name}`);
+            // Pass all keys/config to the handler, let it pick what it needs
+            const config = {
+                geminiApiKey,
+                geminiModel,
+                groqApiKey,
+                groqModel
+            };
+
+            const rawText = await handler.generate(userPrompt, systemInstruction, config);
             return {
                 success: true,
                 text: cleanAIResponse(rawText),
-                mode: 'cloud'
+                mode: `cloud-${cloudProvider}`
             };
+        } else {
+            console.error(`[AI Service] Unknown cloud provider: ${cloudProvider}`);
+            throw new Error(`Unknown cloud provider: ${cloudProvider}`);
         }
-        console.error('[AI Service] API Key is missing or empty!');
-        throw new Error('API Key missing');
     };
 
     // --- Execution Logic ---
@@ -553,27 +692,10 @@ async function generatePolishedText(userPrompt, systemInstruction) {
         catch (e) { return { success: false, error: 'Cloud Only mode failed: ' + e.message, mode: 'cloud' }; }
     }
 
-    // 3. Hybrid Mode Fallback Chain
-    // Chain: Cloud -> Nano
-
-    // Attempt 1: Cloud (Gemini API)
-    try {
-        return await tryCloud();
-    } catch (e) {
-        console.warn('[AI Service] Auto-switch: Cloud failed, trying next...');
-    }
-
-    // Attempt 2: Gemini Nano (local)
-    try {
-        return await tryGeminiNano();
-    } catch (e) {
-        console.warn('[AI Service] Auto-switch: Nano failed');
-    }
-
-    // All failed
+    // If we get here, something is wrong with mode config
     return {
         success: false,
-        error: 'No AI available. Please configure an AI option in Settings.',
+        error: 'Invalid AI Mode selected. Please check settings.',
         mode: 'none'
     };
 }

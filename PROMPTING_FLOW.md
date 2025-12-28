@@ -75,7 +75,7 @@ The Meta Prompt (Layer 3) is critical—it prevents the AI from accidentally **a
 
 1. Retrieves user preferences from storage:
    - `geminiApiKey` - for Cloud API
-   - `aiMode` - hybrid, cloud, or local
+   - `aiMode` - cloud or local
 2. Assembles the 3-layer prompt structure
 3. Routes to appropriate AI backend based on mode
 
@@ -201,16 +201,17 @@ Example of INCORRECT output:
 
 | Mode | Execution |
 |------|-----------|
-| **Hybrid** (default) | Try Cloud → Fall back to Local |
+| Mode | Execution |
+|------|-----------|
 | **Cloud Only** | Cloud API only, error if no key |
 | **Local Only** | Gemini Nano only, error if unavailable |
 
 ```javascript
-// Hybrid Mode Fallback Chain
-try {
-  return await tryCloud();      // Attempt 1: Gemini Flash API
-} catch (e) {
-  return await tryGeminiNano(); // Attempt 2: Gemini Nano (local)
+// Strict Mode Execution
+if (mode === 'cloud') {
+  return await tryCloud();
+} else if (mode === 'local') {
+  return await tryGeminiNano();
 }
 ```
 

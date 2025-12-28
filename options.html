@@ -193,6 +193,20 @@
       min-height: auto;
     }
 
+    /* Mode Status Block - Conditional display based on Local/Cloud */
+    .mode-status-block {
+      grid-column: span 2;
+      min-height: auto;
+    }
+
+    /* ----- API Key / Cloud Provider Settings ----- */
+    .api-key-block {
+      grid-column: span 2;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    /* Sites Block - Now below API Key */
     .sites-block {
       grid-column: span 2;
       min-height: auto;
@@ -217,14 +231,170 @@
     }
 
     .sites-block .site-card {
-      padding: 1rem 0.75rem;
+      padding: 0.5rem 0.5rem;
+      /* Reduced padding */
     }
 
-    /* ----- ROW 4: API Key below sites ----- */
-    .api-key-block {
-      grid-column: span 2;
-      padding-top: 1rem;
-      padding-bottom: 1rem;
+    /* Local AI Status Card Styles */
+    .local-status-card {
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .local-status-card.ready {
+      border-color: var(--success);
+      background: rgba(45, 212, 191, 0.08);
+    }
+
+    .local-status-card.not-ready {
+      border-color: var(--warning);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .status-icon {
+      font-size: 1.5rem;
+    }
+
+    .status-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+
+    .status-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .setup-instructions {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+
+    .setup-instructions h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+    }
+
+    .setup-instructions ol {
+      padding-left: 1.25rem;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.8;
+    }
+
+    .setup-instructions li {
+      margin-bottom: 0.5rem;
+    }
+
+    .setup-instructions code {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      cursor: pointer;
+    }
+
+    .setup-instructions code:hover {
+      background: rgba(99, 102, 241, 0.25);
+    }
+
+    .setup-instructions a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .setup-instructions a:hover {
+      text-decoration: underline;
+    }
+
+    /* Cloud Settings Card Styles */
+    .cloud-settings-card {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .settings-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .settings-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .dropdown-select {
+      width: 100%;
+      height: 42px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 2.5rem 0 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition);
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394A3B8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+    }
+
+    .dropdown-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .dropdown-select:hover {
+      border-color: var(--border-hover);
+    }
+
+    .minimal-dropdown {
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--accent);
+      cursor: pointer;
+      font-family: inherit;
+      padding-right: 1.25rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%230EA5E9' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right center;
+    }
+
+    .minimal-dropdown:focus {
+      outline: none;
+      text-decoration: underline;
     }
 
 
@@ -369,35 +539,7 @@
       opacity: 1;
     }
 
-    /* Center option (Hybrid) emphasis */
-    .toggle-option.center {
-      position: relative;
-    }
 
-    .toggle-option.center::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 20%;
-      height: 60%;
-      width: 1px;
-      background: var(--border);
-    }
-
-    .toggle-option.center::after {
-      content: "";
-      position: absolute;
-      right: 0;
-      top: 20%;
-      height: 60%;
-      width: 1px;
-      background: var(--border);
-    }
-
-    .toggle-option.center.active::before,
-    .toggle-option.center.active::after {
-      opacity: 0;
-    }
 
     .recommended-badge {
       font-size: 0.6rem;
@@ -1394,6 +1536,38 @@
         font-size: 1.5rem;
       }
     }
+
+    /* Copy Button */
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      padding: 4px 8px;
+      margin-left: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      vertical-align: middle;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .copy-btn:active {
+      transform: translateY(1px);
+    }
+
+    .copy-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2;
+    }
   </style>
 </head>
 
@@ -1428,25 +1602,48 @@
         </div>
         <div class="info-item">
           <h4>Cloud API Setup</h4>
-          <p>Fast and reliable. Requires an API key.</p>
+          <p>Fast and reliable. Both providers have generous free tiers—you are unlikely to hit rate limits or incur
+            costs.</p>
+          <ul style="margin: 0.5rem 0 0.5rem 1.25rem; font-size: 0.85rem; color: var(--text-secondary);">
+            <li style="margin-bottom: 0.25rem;"><strong>Groq:</strong> No credit card required.</li>
+            <li><strong>Gemini:</strong> May require a credit card on file.</li>
+          </ul>
           <ol>
-            <li>Get a free API Key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI
-                Studio</a>.</li>
-            <li>Paste the key in the "Google API Key" section below.</li>
+            <li>Get an API Key from your chosen provider.</li>
+            <li>Paste the key in the "Cloud Provider" section below.</li>
             <li>Click <strong>Save</strong>.</li>
+            <li>Select a model from the dropdown if you need to customize (defaults are the most cost-effective
+              options).</li>
           </ol>
         </div>
         <div class="info-item">
           <h4>Local (Nano) Setup</h4>
           <p>Privacy-first option. Runs offline in Chrome.</p>
           <ol>
-            <li>Open <code>chrome://flags</code> (copy url)</li>
+            <li>Open <code>chrome://flags</code> <button class="copy-btn"
+                onclick="navigator.clipboard.writeText('chrome://flags'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
+                title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg></button></li>
             <li>Enable <code>Optimization Guide On Device Model</code></li>
             <li>Enable <code>Prompt API for Gemini Nano</code></li>
             <li>Relaunch Chrome.</li>
-            <li>Open <code>chrome://components</code> and check for updates to "Optimization Guide On Device Model".
+            <li>Open <code>chrome://components</code> <button class="copy-btn"
+                onclick="navigator.clipboard.writeText('chrome://components'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
+                title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg></button> and check for updates to "Optimization Guide On Device Model".
             </li>
           </ol>
+          <div
+            style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 6px;">
+            <strong>Note:</strong> Works on Google Chrome. May not work on other Chromium browsers (Brave, Edge, etc).
+            If using those, please use the Cloud API instead.
+          </div>
         </div>
       </div>
     </div>
@@ -1479,7 +1676,7 @@
 
     <!-- Model Selection (with inline status) -->
     <div class="card model-selection-block">
-      <div class="card-header">
+      <div class="card-header" style="display:none;">
         <h2>Model Selection</h2>
         <!-- Inline status display -->
         <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
@@ -1489,19 +1686,22 @@
         </div>
       </div>
       <div class="toggle-switch-container">
+        <style>
+          /* Compact toggle for model selection */
+          .model-selection-block .toggle-option {
+            padding: 0.5rem 0.75rem !important;
+          }
+
+          .model-selection-block .toggle-label {
+            font-size: 0.85rem !important;
+          }
+        </style>
         <div class="toggle-switch" id="aiModeToggle">
           <div class="toggle-option" data-value="local">
-            <span class="toggle-label">Local Only</span>
-            <span class="toggle-desc">Gemini Nano</span>
-          </div>
-          <div class="toggle-option center active" data-value="hybrid">
-            <span class="toggle-label">Hybrid</span>
-            <span class="toggle-desc">Cloud → Local</span>
-            <span class="recommended-badge">Recommended</span>
+            <span class="toggle-label">Local</span>
           </div>
           <div class="toggle-option" data-value="cloud">
-            <span class="toggle-label">Cloud Only</span>
-            <span class="toggle-desc">Gemini Flash</span>
+            <span class="toggle-label">Cloud</span>
           </div>
         </div>
       </div>
@@ -1510,7 +1710,88 @@
       <div id="aiStatusDetails" style="display:none;"></div>
     </div>
 
-    <!-- Site Toggles -->
+    <!-- Mode Status Card - Conditional based on Local/Cloud selection -->
+    <div class="card mode-status-block">
+      <!-- Local AI Status Card (shown when Local Only is selected) -->
+      <div id="localStatusCard" class="local-status-card" style="display: none;">
+        <div class="status-header">
+          <span id="localStatusIcon" class="status-icon">⏳</span>
+          <div>
+            <div id="localStatusTitle" class="status-title">Checking Gemini Nano...</div>
+            <div id="localStatusSubtitle" class="status-subtitle">Verifying on-device AI availability</div>
+          </div>
+        </div>
+        <div id="localSetupInstructions" class="setup-instructions" style="display: none;">
+          <h4>📋 Setup Instructions</h4>
+          <ol>
+            <li>Open <code>chrome://flags/#optimization-guide-on-device-model</code> <button class="copy-btn"
+                onclick="navigator.clipboard.writeText('chrome://flags/#optimization-guide-on-device-model'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
+                title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg></button></li>
+            <li>Set <strong>"Optimization Guide On Device Model"</strong> to <strong>Enabled
+                BypassPerfRequirement</strong></li>
+            <li>Open <code>chrome://flags/#prompt-api-for-gemini-nano</code> <button class="copy-btn"
+                onclick="navigator.clipboard.writeText('chrome://flags/#prompt-api-for-gemini-nano'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
+                title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg></button></li>
+            <li>Set <strong>"Prompt API for Gemini Nano"</strong> to <strong>Enabled</strong></li>
+            <li>Relaunch Chrome</li>
+            <li>Open <code>chrome://components</code> <button class="copy-btn"
+                onclick="navigator.clipboard.writeText('chrome://components'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'></rect><path d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'></path></svg>', 1500);"
+                title="Copy URL"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg></button> and click <strong>Check for update</strong> on "Optimization Guide On Device Model"</li>
+          </ol>
+          <div
+            style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border);">
+            <strong>Note:</strong> Works on Google Chrome. May not work on other Chromium browsers (Brave, Edge, etc).
+            If using those, please use the Cloud API.
+          </div>
+        </div>
+      </div>
+
+      <!-- Cloud Settings Card (shown when Cloud Only is selected - default visible) -->
+      <div id="cloudSettingsCard" class="cloud-settings-card">
+        <div class="settings-row">
+          <label class="settings-label">Cloud Provider</label>
+          <select id="cloudProviderSelect" class="dropdown-select">
+            <option value="gemini">Gemini (Google AI)</option>
+            <option value="groq">Groq</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <label class="settings-label" id="apiKeyLabel">API Key</label>
+          <div class="input-wrapper">
+            <input type="password" id="cloudApiKey" placeholder="Enter API key..." spellcheck="false">
+            <button type="button" id="toggleCloudKeyVisibility" class="btn-mini">👁️</button>
+            <button id="saveCloudSettingsBtn" class="btn-primary">Save</button>
+            <button id="clearCloudSettingsBtn" class="btn-secondary">Clear</button>
+          </div>
+          <a id="getApiKeyLink" href="https://aistudio.google.com/app/apikey" target="_blank"
+            style="font-size: 0.75rem; color: var(--accent); text-decoration: none; margin-top: 0.25rem;">Get API Key
+            →</a>
+        </div>
+        <div class="settings-row">
+          <label class="settings-label">Model</label>
+          <select id="cloudModelSelect" class="minimal-dropdown">
+            <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          </select>
+        </div>
+        <div id="cloudSettingsStatus" class="status-msg"></div>
+      </div>
+    </div>
+
+    <!-- Site Toggles (Now below API Key) -->
     <div class="card sites-block">
       <div class="card-header">
         <h2>Enabled Sites</h2>
@@ -1542,21 +1823,6 @@
         </label>
       </div>
     </div>
-
-    <!-- API Key (Compact) -->
-    <div class="card api-key-block">
-      <div class="card-header">
-        <h2>Google API Key</h2>
-      </div>
-      <div class="input-wrapper">
-        <input type="password" id="apiKey" placeholder="AIza..." spellcheck="false">
-        <button type="button" id="toggleKeyVisibility" class="btn-mini">👁️</button>
-        <button id="saveApiKeyBtn" class="btn-primary">Save</button>
-        <button id="clearApiKeyBtn" class="btn-secondary">Clear</button>
-      </div>
-      <div id="apiKeyStatus" class="status-msg"></div>
-    </div>
-
 
 
 

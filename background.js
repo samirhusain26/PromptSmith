@@ -5,12 +5,13 @@
  * - Extension installation/updates
  * - Opening options page on action click
  * - Message passing between content scripts and AI service
- * - Unified AI generation with hybrid local/cloud fallback
+ * - Unified AI generation with strict local/cloud modes
  */
 
 // Import dependencies as modules
 import { AIService } from './ai_service.js';
-import { DEFAULT_SYSTEM_PROMPT } from './constants.js';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONA } from './constants.js';
+import { PERSONAS } from './prompts.js';
 
 // Attach services to global scope for debugging/interaction if needed
 self.AIService = AIService;
@@ -165,9 +166,18 @@ async function handlePolishText(text, sendResponse, tempSystemPrompt = null) {
     if (!systemPrompt) {
       // Fallback to stored settings if no specific prompt provided
       const storage = await chrome.storage.sync.get(['activePersona', 'customPersonaPrompts']);
-      const persona = storage.activePersona || 'polisher';
+      const persona = storage.activePersona || DEFAULT_PERSONA;
       const customPrompts = storage.customPersonaPrompts || {};
-      systemPrompt = customPrompts[persona] || DEFAULT_SYSTEM_PROMPT;
+
+      // Priority: 1. Custom prompt for this persona, 2. Default persona instruction from PERSONAS
+      if (customPrompts[persona]) {
+        systemPrompt = customPrompts[persona];
+      } else if (PERSONAS[persona] && PERSONAS[persona].instruction) {
+        systemPrompt = PERSONAS[persona].instruction;
+      } else {
+        // Final fallback (should rarely happen)
+        systemPrompt = DEFAULT_SYSTEM_PROMPT;
+      }
     }
 
     // Use AI service to generate polished text

@@ -1122,21 +1122,25 @@
 
         try {
             // Determine the system prompt to use
+            // Priority: 1. Custom prompt saved for this persona, 2. Default PERSONAS instruction
             let systemPrompt = customPersonaPrompts[currentPersona] || PERSONAS[currentPersona].instruction;
 
-            // Special handling for Custom persona: check if a custom prompt is configured
+            // Special handling for Custom persona: ensure a valid prompt is configured
             if (currentPersona === 'custom') {
-                // Check storage for customPrompt
-                const storage = await new Promise((resolve) => {
-                    chrome.storage.sync.get(['customPrompt'], resolve);
-                });
+                // Check if the custom persona has a custom prompt saved
+                // customPersonaPrompts is already loaded at init and synced via storage listener
+                const customPrompt = customPersonaPrompts['custom'];
 
-                if (!storage.customPrompt || storage.customPrompt.trim() === '' || storage.customPrompt === '[CUSTOM_PROMPT_PLACEHOLDER]') {
+                // Validate the custom prompt exists and isn't placeholder text
+                if (!customPrompt ||
+                    customPrompt.trim() === '' ||
+                    customPrompt === '[CUSTOM_PROMPT_PLACEHOLDER]' ||
+                    customPrompt.startsWith('[Enter your custom system prompt here]')) {
                     showStatus('❌ Custom prompt not configured. Please set one in Settings.', 'error');
                     wrapper.classList.remove('lpp-loading');
                     return;
                 }
-                systemPrompt = storage.customPrompt;
+                systemPrompt = customPrompt;
             }
 
             const response = await new Promise((resolve, reject) => {
