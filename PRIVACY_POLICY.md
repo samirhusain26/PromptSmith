@@ -18,7 +18,7 @@ The extension stores the following data **locally in your browser** using Chrome
 
 | Data Type | Purpose | Storage Location |
 |-----------|---------|------------------|
-| API Key (optional) | To use Gemini Flash API for prompt enhancement | Local browser storage |
+| API Key (optional) | To use Gemini or Groq API for prompt enhancement | Local browser storage |
 | User Preferences | Site toggles, selected personas, AI mode settings | Local browser storage |
 | Custom Personas | User-created prompt enhancement personas | Local browser storage |
 
@@ -28,7 +28,7 @@ PromptSmith offers two AI processing modes:
 
 1. **Gemini Nano (On-Device)** - All processing happens locally in your browser. No data leaves your device.
 
-2. **Gemini Flash API (Cloud)** - Your prompt text is sent to Google's Generative Language API for processing. This is optional and only used if you provide an API key.
+2. **Cloud API (Gemini or Groq)** - Your prompt text is sent to Google's or Groq's API for processing. This is optional and only used if you provide an API key.
 
 ## Permissions Explained
 
@@ -40,7 +40,8 @@ PromptSmith offers two AI processing modes:
 
 ## Third-Party Services
 
-- **Google Generative Language API**: Only used if you choose to enable the Gemini Flash API mode and provide your own API key. Subject to [Google's Privacy Policy](https://policies.google.com/privacy).
+- **Google Generative Language API**: Only used if you choose Gemini as your cloud provider and provide your own API key. Subject to [Google's Privacy Policy](https://policies.google.com/privacy).
+- **Groq API**: Only used if you choose Groq as your cloud provider and provide your own API key. Subject to [Groq's Privacy Policy](https://groq.com/privacy-policy/).
 
 ## Data Sharing
 
@@ -77,4 +78,4 @@ If you have questions about this privacy policy, please open an issue on our Git
 
 ---
 
-**Summary**: PromptSmith processes everything locally. The only exception is if you explicitly choose to use the Gemini Flash API, in which case your prompts are sent to Google's servers for processing.
+**Summary**: PromptSmith processes everything locally by default. If you choose to use cloud mode (Gemini or Groq), your prompts are sent to the respective provider's servers for processing.

@@ -6,7 +6,7 @@ PromptSmith is a Chrome Extension that intelligently polishes your prompts befor
 
 It features a **Smart AI Mode** that automatically chooses the best privacy/performance balance by default (you can also manually lock it to Cloud or Local mode):
 1. **Cloud Speed**: Uses your API keys (Gemini or Groq) for instant results.
-2. **Local Privacy**: Falls back to **Gemini Nano** (built into Chrome) for 100% on-device processing if no key is found.
+2. **Local Privacy**: Uses **Gemini Nano** (built into Chrome) for 100% on-device processing.
 
 ---
 

@@ -15,7 +15,7 @@ This document summarizes how prompts flow through the PromptSmith extension, fro
        │                    │                       ▼
        │                    │              ┌────────────────┐
        │                    │              │ Gemini Nano OR │
-       │                    │              │ Gemini Flash   │
+       │                    │              │ Cloud API      │
        ◀────────────────────┴──────────────┤   (AI Engine)  │
        │           (Polished text response)└────────────────┘
        ▼
@@ -96,7 +96,7 @@ ${META_PROMPT}`;
 
 The `systemInstruction` is also passed when creating the AI session.
 
-#### For Cloud AI (Gemini Flash):
+#### For Cloud AI (Gemini/Groq):
 
 **File:** `ai_service.js` → `generateWithCloudAI()`
 
@@ -222,7 +222,7 @@ if (mode === 'cloud') {
 | Key | Purpose |
 |-----|---------|
 | `geminiApiKey` | Google AI Studio API key |
-| `aiMode` | Processing mode: hybrid, cloud, local |
+| `aiMode` | Processing mode: cloud or local |
 | `activePersona` | Currently selected persona |
 | `customPersonaPrompts` | User's custom prompt text |
 | `enabledSites` | Per-site toggle (chatgpt, claude, gemini) |
