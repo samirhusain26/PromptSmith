@@ -1,9 +1,8 @@
 /**
- * PromptSmith - Content Script
- * 
- * Injects a "✨ Polish" button into ChatGPT, Claude, and Gemini interfaces.
- * Uses MutationObserver for robust detection on SPAs.
- * Communicates with background service worker for AI processing.
+ * PromptSmith - Content Script (FAB Edition)
+ *
+ * Injects a draggable Floating Action Button into ChatGPT, Claude, and Gemini.
+ * Uses ResizeObserver + MutationObserver for robust positioning.
  */
 
 (function () {
@@ -14,18 +13,11 @@
     // ============================================================
 
     const ICONS = {
-        sparkle: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L14.39 8.26L20 12L14.39 15.74L12 22L9.61 15.74L4 12L9.61 8.26L12 2Z" fill="currentColor"/></svg>',
         chevronDown: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     };
 
-    // PERSONAS object - will be populated from prompts.js
-    // This is loaded dynamically from the centralized prompts module
     let PERSONAS = null;
 
-    /**
-     * Load PERSONAS from the centralized prompts.js file
-     * Uses dynamic import via chrome.runtime.getURL
-     */
     async function loadPersonas() {
         try {
             const promptsUrl = chrome.runtime.getURL('prompts.js');
@@ -35,34 +27,36 @@
             return true;
         } catch (error) {
             console.error('[PromptSmith] Failed to load PERSONAS from prompts.js:', error);
-            // Fallback to inline definition if dynamic import fails
             PERSONAS = getFallbackPersonas();
             return false;
         }
     }
 
-    /**
-     * Fallback PERSONAS in case dynamic import fails
-     */
     function getFallbackPersonas() {
         console.warn('[PromptSmith] dynamic import of prompts.js failed. Fallback active.');
         return {
-            polisher: {
+            editor: {
                 icon: '✨',
-                label: 'Polisher',
-                description: 'Grammar, clarity, and professional tone.',
+                label: 'Editor',
+                description: 'Clarity, structure, and professional tone using CO-STAR.',
+                instruction: 'Error: Could not load personas. Please reload the page.'
+            },
+            brainstormer: {
+                icon: '🗣️',
+                label: 'Brainstormer',
+                description: 'Divergent ideation, role-storming, and ranked evaluation.',
                 instruction: 'Error: Could not load personas. Please reload the page.'
             },
             developer: {
                 icon: '💻',
                 label: 'Developer',
-                description: 'Code, JSON, and strict structures.',
+                description: 'Structured code prompts with XML tags and examples.',
                 instruction: 'Error: Could not load personas. Please reload the page.'
             },
             thinker: {
                 icon: '🧠',
                 label: 'Thinker',
-                description: 'Reasoning, Chain of Thought, and fact-checking.',
+                description: 'Deep reasoning, Chain of Thought, and evidence standards.',
                 instruction: 'Error: Could not load personas. Please reload the page.'
             },
             custom: {
@@ -75,20 +69,14 @@
     }
 
     const CONFIG = {
-        // Unique attribute to mark our injected elements
         MARKER_ATTR: 'data-lpp-injected',
-
-        // Debounce delay for observer callbacks (ms)
         DEBOUNCE_DELAY: 300,
-
-        // Max retries for finding input
         MAX_RETRIES: 50,
-
-        // Retry interval (ms)
         RETRY_INTERVAL: 500,
+        FAB_SIZE: 32,
+        FAB_OFFSET: 8, // px gap below the input box
     };
 
-    // Site-specific selectors and configurations
     const SITE_CONFIGS = {
         chatgpt: {
             hostname: ['chat.openai.com', 'chatgpt.com'],
@@ -98,15 +86,7 @@
                 'div[contenteditable="true"][id="prompt-textarea"]',
                 'form textarea',
             ],
-            containerSelectors: [
-                'form.w-full',
-                'div[class*="composer"]',
-                'main form',
-            ],
-            // Use toolbar positioning for native feel
-            buttonPosition: 'toolbar-end',
         },
-
         claude: {
             hostname: ['claude.ai'],
             inputSelectors: [
@@ -114,13 +94,7 @@
                 'div[contenteditable="true"]',
                 'fieldset div[contenteditable]',
             ],
-            containerSelectors: [
-                'fieldset',
-                'form',
-            ],
-            buttonPosition: 'toolbar-end',
         },
-
         gemini: {
             hostname: ['gemini.google.com'],
             inputSelectors: [
@@ -128,20 +102,6 @@
                 '.ql-editor',
                 'div[contenteditable="true"]',
             ],
-            containerSelectors: [
-                // Target the toolbar or input wrapper area
-                '.input-area-container',
-                'rich-textarea',
-                'div[class*="input-area"]',
-            ],
-            // Special positioning for native feel
-            buttonPosition: 'toolbar-end',
-            // Selectors for finding the toolbar to inject into
-            toolbarSelectors: [
-                '.input-area-container > div:last-child', // Often the toolbar container
-                'rich-textarea ~ div',
-                'div[role="toolbar"]'
-            ]
         },
     };
 
@@ -151,171 +111,219 @@
 
     let currentSite = null;
     let debounceTimer = null;
-    let currentPersona = 'polisher'; // Default
-    let customPersonaPrompts = {}; // Custom prompts saved from settings page
-
-    // Logic for dropdown state management
-    let activeDropdownTrigger = null;
+    let currentPersona = 'editor';
+    let customPersonaPrompts = {};
     let activeDropdownCleanup = null;
+    let activeDropdownTrigger = null;
+
+    // FAB state
+    let fabElement = null;
+    let fabResizeObserver = null;
+    let fabDragOffset = null; // { x, y } when user has manually dragged
+    let isDragging = false;
+    let dragStartPos = null;
 
     // ============================================================
-    // UTILITY FUNCTIONS
+    // STYLES
     // ============================================================
 
-    /**
-     * Inject styles for the extension
-     */
+    // Site-specific theme tokens
+    const SITE_THEMES = {
+        chatgpt: {
+            fabBg: '#10a37f',
+            fabBgHover: '#0ec48e',
+            fabBorder: 'rgba(255,255,255,0.15)',
+            fabShadow: 'rgba(16,163,127,0.35)',
+            dropdownBg: 'rgba(32,33,35,0.97)',
+            dropdownBorder: '#444',
+            textColor: '#ececec',
+            textMuted: '#999',
+            accentColor: '#10a37f',
+            accentSubtle: 'rgba(16,163,127,0.15)',
+            fabTextColor: '#fff',
+        },
+        claude: {
+            fabBg: '#d97757',
+            fabBgHover: '#e08a6c',
+            fabBorder: 'rgba(255,255,255,0.15)',
+            fabShadow: 'rgba(217,119,87,0.35)',
+            dropdownBg: 'rgba(43,42,39,0.97)',
+            dropdownBorder: '#4a4843',
+            textColor: '#e8e6e3',
+            textMuted: '#9b9890',
+            accentColor: '#d97757',
+            accentSubtle: 'rgba(217,119,87,0.15)',
+            fabTextColor: '#fff',
+        },
+        gemini: {
+            fabBg: '#669df6',
+            fabBgHover: '#7baaf7',
+            fabBorder: 'rgba(255,255,255,0.15)',
+            fabShadow: 'rgba(102,157,246,0.35)',
+            dropdownBg: 'rgba(30,31,32,0.97)',
+            dropdownBorder: '#3c3f41',
+            textColor: '#e3e3e3',
+            textMuted: '#8e918f',
+            accentColor: '#669df6',
+            accentSubtle: 'rgba(102,157,246,0.15)',
+            fabTextColor: '#fff',
+        },
+    };
+
     function injectStyles() {
         if (document.getElementById('lpp-styles')) return;
+
+        const t = SITE_THEMES[currentSite] || SITE_THEMES.chatgpt;
 
         const style = document.createElement('style');
         style.id = 'lpp-styles';
         style.textContent = `
-            :root {
-                /* Light & Airy v2.0 - System UI font with fallbacks */
-                --lpp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                
-                /* Sky & Stone Palette */
-                --lpp-primary: #0EA5E9;
-                --lpp-primary-hover: #0284C7;
-                --lpp-primary-subtle: #E0F2FE;
-                --lpp-success: #2DD4BF;
-                --lpp-error: #FB7185;
-                --lpp-bg: #FFFFFF;
-                --lpp-surface: #F8FAFC;
-                --lpp-border: #E2E8F0;
-                --lpp-text: #334155;
-                --lpp-text-muted: #94A3B8;
-            }
-            @media (prefers-color-scheme: dark) {
-                :root {
-                    --lpp-primary: #38BDF8;
-                    --lpp-primary-subtle: #0F172A;
-                    --lpp-bg: #1e293b;
-                    --lpp-surface: #334155;
-                    --lpp-border: #475569;
-                    --lpp-text: #F1F5F9;
-                }
-            }
-            .lpp-dropdown-portal, .lpp-tooltip, .lpp-button-group {
-                font-family: var(--lpp-font) !important;
-            }
-            .lpp-button-group {
-                display: inline-flex;
-                align-items: center;
-                margin-right: 8px;
-                vertical-align: middle;
-            }
-            /* Adjustments for ChatGPT specifically to ensure it fits */
-
-            .lpp-native-toolbar.lpp-chatgpt-toolbar {
-                margin-right: 2px;
-                height: 100%;
-                background: transparent !important;
-                padding: 0;
-                border: none !important;
-                box-shadow: none !important;
-                outline: none !important;
-                display: flex;
-                align-items: center;
-            }
-            .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-polish-action,
-            .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-dropdown-trigger {
-                background: transparent !important;
-                color: var(--lpp-text-muted);
-                border: none !important;
-                box-shadow: none !important;
-                outline: none !important;
-                border-radius: 6px;
-                padding: 4px 8px;
+            /* ── FAB ── */
+            .lpp-fab {
+                position: fixed;
+                z-index: 2147483646;
+                width: ${CONFIG.FAB_SIZE}px;
+                height: ${CONFIG.FAB_SIZE}px;
+                border-radius: 50%;
+                background: ${t.fabBg};
+                border: 1px solid ${t.fabBorder};
+                box-shadow: 0 2px 8px ${t.fabShadow};
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                height: 100%;
-                cursor: pointer;
-                transition: all 0.2s ease;
-            }
-            .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-polish-action:hover,
-            .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-dropdown-trigger:hover {
-                background: var(--lpp-primary-subtle) !important;
-                color: var(--lpp-primary);
-            }
-            .lpp-native-toolbar.lpp-chatgpt-toolbar .lpp-dropdown-trigger {
-                padding: 4px;
-                margin-left: 2px;
-            }
-            /* Light & Airy Dropdown - "The Sheet" */
-            .lpp-dropdown-portal {
+                cursor: grab;
+                user-select: none;
+                color: ${t.fabTextColor};
                 font-size: 14px;
+                line-height: 1;
+                opacity: 0.75;
+                transition: opacity 0.2s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease;
+            }
+            .lpp-fab:hover {
+                opacity: 1;
+                background: ${t.fabBgHover};
+                box-shadow: 0 4px 14px ${t.fabShadow};
+                transform: scale(1.1);
+            }
+            .lpp-fab.lpp-dragging {
+                cursor: grabbing;
+                opacity: 1;
+                box-shadow: 0 6px 20px ${t.fabShadow};
+                transform: scale(1.15);
+                transition: none;
+            }
+            .lpp-fab.lpp-loading {
+                opacity: 0.9;
+                pointer-events: none;
+            }
+            .lpp-fab.lpp-loading::after {
+                content: '';
+                position: absolute;
+                inset: -3px;
+                border-radius: 50%;
+                border: 2px solid transparent;
+                border-top-color: ${t.accentColor};
+                animation: lpp-spin 0.6s linear infinite;
+            }
+
+            @keyframes lpp-spin {
+                to { transform: rotate(360deg); }
+            }
+
+            /* ── Sparkle burst ── */
+            @keyframes lpp-sparkle-burst {
+                0% { transform: scale(0.8); opacity: 1; }
+                50% { transform: scale(1.35); }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            .lpp-fab.lpp-sparkle {
+                animation: lpp-sparkle-burst 0.45s ease-out;
+                opacity: 1;
+            }
+
+            /* ── Sparkle particles ── */
+            .lpp-sparkle-particle {
+                position: fixed;
+                z-index: 2147483647;
+                pointer-events: none;
+                font-size: 10px;
+                animation: lpp-particle-fly 0.55s ease-out forwards;
+            }
+            @keyframes lpp-particle-fly {
+                0% { opacity: 1; transform: translate(0, 0) scale(1); }
+                100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2); }
+            }
+
+            /* ── Dropdown ── */
+            .lpp-dropdown-portal {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 13px;
                 font-weight: 400;
-                background: rgba(255,255,255,0.95);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
-                border: 1px solid #F1F5F9;
-                border-radius: 8px;
-                box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
+                background: ${t.dropdownBg};
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid ${t.dropdownBorder};
+                border-radius: 10px;
+                box-shadow: 0 12px 32px -8px rgba(0,0,0,0.45);
                 z-index: 2147483647;
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
-                min-width: 200px;
-                max-width: 280px;
-                padding: 6px;
-            }
-            @media (prefers-color-scheme: dark) {
-                .lpp-dropdown-portal {
-                    background: rgba(30, 41, 59, 0.95);
-                    border-color: var(--lpp-border);
-                    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
-                }
+                min-width: 180px;
+                max-width: 240px;
+                padding: 4px;
+                position: fixed;
             }
             .lpp-dropdown-item {
                 display: flex;
                 align-items: center;
-                padding: 10px 14px;
+                padding: 9px 12px;
                 cursor: pointer;
-                border-radius: 6px;
-                color: var(--lpp-text);
-                transition: all 0.15s ease;
-                gap: 10px;
+                border-radius: 7px;
+                color: ${t.textColor};
+                transition: all 0.12s ease;
+                gap: 8px;
             }
             .lpp-dropdown-item:hover {
-                background: var(--lpp-primary-subtle);
-                color: var(--lpp-primary);
+                background: ${t.accentSubtle};
+                color: ${t.accentColor};
             }
             .lpp-dropdown-item.selected {
-                background: var(--lpp-primary-subtle);
-                color: var(--lpp-primary);
+                background: ${t.accentSubtle};
+                color: ${t.accentColor};
             }
             .lpp-item-icon {
                 font-size: 1em;
                 flex-shrink: 0;
-                width: 18px;
+                width: 16px;
                 text-align: center;
-                color: var(--lpp-text-muted);
+                color: ${t.textMuted};
             }
             .lpp-dropdown-item:hover .lpp-item-icon,
             .lpp-dropdown-item.selected .lpp-item-icon {
-                color: var(--lpp-primary);
+                color: ${t.accentColor};
             }
             .lpp-item-label {
                 font-weight: 400;
-                font-size: 13px;
+                font-size: 12px;
                 color: inherit;
             }
-            /* Tooltip - Soft slate, not harsh black */
+
+            /* ── Tooltip ── */
             .lpp-tooltip {
                 position: fixed;
-                background: var(--lpp-text);
-                color: var(--lpp-bg);
-                padding: 8px 12px;
+                background: ${t.fabBg};
+                color: ${t.textColor};
+                padding: 6px 10px;
                 border-radius: 6px;
+                border: 1px solid ${t.fabBorder};
                 z-index: 2147483647;
                 pointer-events: none;
-                max-width: 200px;
-                font-size: 12px;
+                max-width: 180px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-size: 11px;
                 line-height: 1.4;
-                box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2);
+                box-shadow: 0 8px 24px -8px rgba(0,0,0,0.3);
                 animation: lpp-tooltip-in 0.1s ease-out;
             }
             @keyframes lpp-tooltip-in {
@@ -323,158 +331,39 @@
                 to { opacity: 1; transform: scale(1); }
             }
 
-            /* Claude Native Toolbar Styles */
-            .lpp-native-toolbar.lpp-claude-toolbar {
-                margin-left: 0; /* Let flex gap handle it, or minimal spacing */
-                height: 32px;
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                border-radius: 4px; /* Squared look */
-                display: inline-flex;
-                align-items: center;
-                padding: 0 2px;
+            /* ── Status label (anchored to FAB) ── */
+            .lpp-status {
+                position: fixed;
+                z-index: 2147483647;
+                pointer-events: none;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-size: 11px;
+                font-weight: 500;
+                line-height: 1;
+                padding: 5px 10px;
+                border-radius: 6px;
+                white-space: nowrap;
+                color: ${t.textColor};
+                background: ${t.dropdownBg};
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid ${t.dropdownBorder};
+                opacity: 0;
+                transition: opacity 0.2s ease;
             }
-            .lpp-native-toolbar.lpp-claude-toolbar .lpp-polish-action,
-            .lpp-native-toolbar.lpp-claude-toolbar .lpp-dropdown-trigger {
-                background: transparent !important;
-                color: #525252; /* Light mode default */
-                border: none !important;
-                box-shadow: none !important;
-                border-radius: 4px;
-                padding: 4px 6px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            /* Dark mode override for Claude */
-            @media (prefers-color-scheme: dark) {
-                .lpp-native-toolbar.lpp-claude-toolbar .lpp-polish-action,
-                .lpp-native-toolbar.lpp-claude-toolbar .lpp-dropdown-trigger {
-                    color: #d4d4d4;
-                }
-                .lpp-native-toolbar.lpp-claude-toolbar .lpp-polish-action:hover,
-                .lpp-native-toolbar.lpp-claude-toolbar .lpp-dropdown-trigger:hover {
-                     background: rgba(255, 255, 255, 0.1) !important;
-                     color: #fff;
-                }
-            }
-            /* Light mode hover */
-            @media (prefers-color-scheme: light) {
-                 .lpp-native-toolbar.lpp-claude-toolbar .lpp-polish-action:hover,
-                 .lpp-native-toolbar.lpp-claude-toolbar .lpp-dropdown-trigger:hover {
-                    background: rgba(0, 0, 0, 0.05) !important;
-                    color: #000;
-                 }
-            }
-            .lpp-native-toolbar.lpp-claude-toolbar .lpp-dropdown-trigger {
-                padding: 4px 2px;
-                margin-left: 0;
-            }
-
-            /* Gemini Native Toolbar Styles */
-            .lpp-native-toolbar.lpp-gemini-toolbar {
-                display: inline-flex;
-                align-items: center;
-                height: 48px; /* Standard Gemini toolbar height */
-                width: 48px;  /* Make it circular/square like other tools */
-                justify-content: center;
-                margin: 0;
-                padding: 0;
-                border-radius: 50%; /* Circular touch target */
-                background: transparent !important;
-                color: var(--lpp-gemini-icon-color, #444746); /* Default dark gray */
-                transition: background-color 0.2s;
-                cursor: pointer;
-            }
-
-            /* Dark mode for Gemini logic (often handled by site variables, but good to have fallback) */
-            @media (prefers-color-scheme: dark) {
-                .lpp-native-toolbar.lpp-gemini-toolbar {
-                     color: #e3e3e3;
-                }
-            }
-
-            .lpp-native-toolbar.lpp-gemini-toolbar:hover {
-                background-color: rgba(68, 71, 70, 0.08) !important; /* Material 3 hover */
-            }
-             @media (prefers-color-scheme: dark) {
-                .lpp-native-toolbar.lpp-gemini-toolbar:hover {
-                    background-color: rgba(227, 227, 227, 0.08) !important;
-                }
-             }
-
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-polish-action,
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-dropdown-trigger {
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0;
-                margin: 0;
-                height: 100%;
-                display: flex; /* Flex to center icon */
-                align-items: center;
-                justify-content: center;
-                color: inherit; /* Inherit from wrapper */
-                cursor: pointer;
-            }
-
-            /* Hide dropdown arrow for Gemini to look like a single action or handle it subtly */
-            /* We want the split functionality, so maybe make the split invisible but clickable? */
-            /* Or better: Just make the main icon open the dropdown if we want to save space? */
-            /* User said "move it back to be in line... make it seem like it fits" */
-            /* The user also mentioned "make the chtagpt and claude button are not changed". */
-            /* Existing logic splits them. Let's try to keep the split but make it very compact. */
-
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-polish-action {
-                 width: 100%; /* Take full width if we hide arrow, or share */
-                 border-radius: 50%;
-            }
-
-            /* If we want to keep the dropdown trigger visible but integrated: */
-             .lpp-native-toolbar.lpp-gemini-toolbar {
-                /* Actually, Gemini tools are usually single buttons. 
-                   Let's make it a pill shape if we have two buttons, or just a circle if we hide the arrow.
-                   Given the "Native" requirement, a single circle is best. 
-                   We can make the whole button trigger the action, and maybe a long press or right click? 
-                   OR, we keep the split but make it a pill shape like [ ✨ | ▼ ] */
-                
-                width: auto; /* Allow growth for pill */
-                border-radius: 24px; /* Pill radius */
-                padding: 0 4px;
-                border: none !important;
-                box-shadow: none !important;
-                outline: none !important;
-            }
-            
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-polish-action {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-            }
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-dropdown-trigger {
-                 width: 16px; 
-                 height: 32px;
-                 border-radius: 16px; /* Pill end */
-                 opacity: 0.6;
-            }
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-polish-action:hover,
-            .lpp-native-toolbar.lpp-gemini-toolbar .lpp-dropdown-trigger:hover {
-                 background-color: rgba(68, 71, 70, 0.08) !important;
-            }
+            .lpp-status.lpp-visible { opacity: 1; }
+            .lpp-status.lpp-error { color: #f87171; }
+            .lpp-status.lpp-success { color: ${t.accentColor}; }
         `;
         document.head.appendChild(style);
     }
 
-    /**
-     * Detect which site we're on
-     */
+    // ============================================================
+    // UTILITY FUNCTIONS
+    // ============================================================
+
     function detectSite() {
         const hostname = window.location.hostname;
-
         for (const [siteName, config] of Object.entries(SITE_CONFIGS)) {
             if (config.hostname.some(h => hostname.includes(h))) {
                 console.log(`[PromptSmith] Detected site: ${siteName}`);
@@ -484,73 +373,18 @@
         return null;
     }
 
-    /**
-     * Find the main input element on the page
-     */
     function findInputElement() {
         if (!currentSite) return null;
-
         const config = SITE_CONFIGS[currentSite];
-
         for (const selector of config.inputSelectors) {
             try {
                 const element = document.querySelector(selector);
-                if (element && isElementVisible(element)) {
-                    return element;
-                }
-            } catch (e) {
-                // Selector might be invalid, continue
-            }
+                if (element && isElementVisible(element)) return element;
+            } catch (e) { /* continue */ }
         }
         return null;
     }
 
-    /**
-     * Find a suitable container for button injection
-     */
-    function findContainer(inputElement) {
-        if (!currentSite || !inputElement) return null;
-
-        const config = SITE_CONFIGS[currentSite];
-
-        // First, try explicit container selectors
-        for (const selector of config.containerSelectors) {
-            try {
-                const container = document.querySelector(selector);
-                // For Gemini toolbar injection, we might not want strict containment
-                if (config.buttonPosition === 'toolbar-end' && container) {
-                    return container;
-                }
-
-                if (container && container.contains(inputElement)) {
-                    return container;
-                }
-            } catch (e) {
-                // Selector might be invalid, continue to next
-            }
-        }
-
-        // Fallback: walk up the DOM
-        let parent = inputElement.parentElement;
-        let depth = 0;
-        const maxDepth = 10;
-
-        while (parent && depth < maxDepth) {
-            if (parent.tagName === 'FORM' ||
-                parent.tagName === 'FIELDSET' ||
-                parent.getAttribute('role') === 'form') {
-                return parent;
-            }
-            parent = parent.parentElement;
-            depth++;
-        }
-
-        return inputElement.parentElement;
-    }
-
-    /**
-     * Check if element is visible
-     */
     function isElementVisible(element) {
         if (!element) return false;
         const style = window.getComputedStyle(element);
@@ -563,28 +397,6 @@
             rect.height > 0
         );
     }
-
-    /**
-     * Update the host font variable
-     */
-    function updateHostFont(element) {
-        if (!element) return;
-        const font = window.getComputedStyle(element).fontFamily;
-        if (font) {
-            document.documentElement.style.setProperty('--lpp-host-font', font);
-        }
-    }
-
-    /**
-     * Generate unique ID for tracking buttons
-     */
-    function generateButtonId(inputElement) {
-        const rect = inputElement.getBoundingClientRect();
-        // Use coordinates to distinguish inputs, but round heavily to handle minor shifts
-        // Adding random suffix to avoid collisions on completely dynamic re-renders
-        return `lpp-${Math.round(rect.top / 50)}-${Math.round(rect.left / 50)}`;
-    }
-
 
     function setInputText(inputElement, newText) {
         if (!inputElement) return false;
@@ -630,61 +442,43 @@
     }
 
     // ============================================================
-    // DROPDOWN PORTAL (To avoid overflow issues)
+    // DROPDOWN PORTAL
     // ============================================================
 
-    /**
-     * Close the currently active dropdown if any
-     */
     function closeActiveDropdown() {
         if (activeDropdownCleanup) {
             activeDropdownCleanup();
             activeDropdownCleanup = null;
         }
         activeDropdownTrigger = null;
-
-        // Safety cleanup in case manual removal happened
         document.querySelectorAll('.lpp-dropdown-portal').forEach(el => el.remove());
         document.querySelectorAll('.lpp-tooltip').forEach(el => el.remove());
     }
 
     function createDropdownPortal(items, onSelect, rect, triggerElement) {
-        // Ensure clean state
         closeActiveDropdown();
-
-        // Update active trigger
         activeDropdownTrigger = triggerElement;
 
         const portal = document.createElement('div');
         portal.className = 'lpp-dropdown-menu lpp-dropdown-portal';
 
-        // Calculate positions
         const viewportHeight = window.innerHeight;
-        // Estimate height: approx 5 item x ~40px + padding = ~220px
         const estimatedHeight = Object.keys(items).length * 45 + 20;
         const spaceBelow = viewportHeight - rect.bottom;
 
-        // Smart Positioning Logic
         if (spaceBelow < estimatedHeight) {
-            // Not enough space below, flip upwards
             portal.style.bottom = `${viewportHeight - rect.top + 8}px`;
-            portal.style.top = 'auto'; // Reset top
-            portal.style.transformOrigin = 'bottom left';
+            portal.style.top = 'auto';
         } else {
-            // Standard positioning
             portal.style.top = `${rect.bottom + 8}px`;
             portal.style.bottom = 'auto';
-            portal.style.transformOrigin = 'top left';
         }
 
-        // Horizontal positioning: Align left edge, but keep on screen
         let left = rect.left;
         if (left + 300 > window.innerWidth) {
-            // If it would go off screen right, align right edge
             left = rect.right - 300;
         }
-        portal.style.left = `${Math.max(10, left)}px`; // Ensure not off left screen
-        portal.style.position = 'fixed';
+        portal.style.left = `${Math.max(10, left)}px`;
 
         Object.entries(items).forEach(([key, persona]) => {
             const item = document.createElement('div');
@@ -692,11 +486,10 @@
             if (key === currentPersona) item.classList.add('selected');
 
             item.innerHTML = `
-            <span class="lpp-item-icon">${persona.icon}</span>
+                <span class="lpp-item-icon">${persona.icon}</span>
                 <span class="lpp-item-label">${persona.label}</span>
-        `;
+            `;
 
-            // Tooltip Logic
             item.addEventListener('mouseenter', () => {
                 const tooltip = document.createElement('div');
                 tooltip.className = 'lpp-tooltip';
@@ -704,16 +497,12 @@
                 document.body.appendChild(tooltip);
 
                 const itemRect = item.getBoundingClientRect();
-                let tooltipTop = itemRect.top;
                 let tooltipLeft = itemRect.right + 10;
-
-                // Check right edge
                 const tooltipRect = tooltip.getBoundingClientRect();
                 if (tooltipLeft + tooltipRect.width > window.innerWidth) {
                     tooltipLeft = itemRect.left - tooltipRect.width - 10;
                 }
-
-                tooltip.style.top = `${tooltipTop}px`;
+                tooltip.style.top = `${itemRect.top}px`;
                 tooltip.style.left = `${tooltipLeft}px`;
             });
 
@@ -725,29 +514,20 @@
                 e.preventDefault();
                 e.stopPropagation();
                 onSelect(key);
-                closeActiveDropdown(); // Clean close
+                closeActiveDropdown();
             });
 
             portal.appendChild(item);
         });
 
-        // Close logic
         const closeHandler = (e) => {
-            // Ignore clicks on the trigger button itself (handled by its own listener)
-            if (activeDropdownTrigger && activeDropdownTrigger.contains(e.target)) {
-                return;
-            }
-            if (!portal.contains(e.target)) {
-                closeActiveDropdown();
-            }
+            if (activeDropdownTrigger && activeDropdownTrigger.contains(e.target)) return;
+            if (!portal.contains(e.target)) closeActiveDropdown();
         };
 
-        // Delay adding listener to avoid immediate close
         setTimeout(() => document.addEventListener('click', closeHandler), 0);
-
         document.body.appendChild(portal);
 
-        // Store cleanup function
         activeDropdownCleanup = () => {
             portal.remove();
             document.removeEventListener('click', closeHandler);
@@ -757,387 +537,260 @@
     }
 
     // ============================================================
-    // BUTTON CREATION & INJECTION
+    // FAB CREATION & POSITIONING
     // ============================================================
 
-    /**
-     * Create the SPLIT Polish button group
-     */
-    function createPolishButton(inputElement) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'lpp-button-group';
-        if (currentSite === 'gemini') {
-            wrapper.classList.add('lpp-native-toolbar');
-            wrapper.classList.add('lpp-gemini-toolbar');
-        } else if (currentSite === 'chatgpt') {
-            wrapper.classList.add('lpp-native-toolbar');
-            wrapper.classList.add('lpp-chatgpt-toolbar');
-        } else if (currentSite === 'claude') {
-            wrapper.classList.add('lpp-native-toolbar');
-            wrapper.classList.add('lpp-claude-toolbar');
-        }
+    function createFAB() {
+        const fab = document.createElement('div');
+        fab.className = 'lpp-fab';
+        fab.setAttribute(CONFIG.MARKER_ATTR, 'true');
+        fab.textContent = PERSONAS[currentPersona].icon;
+        fab.title = `Polish with ${PERSONAS[currentPersona].label} · Right-click to change persona`;
 
-        wrapper.setAttribute(CONFIG.MARKER_ATTR, 'true');
-
-        // Main Action Button
-        const actionBtn = document.createElement('button');
-        actionBtn.className = 'lpp-polish-action';
-        actionBtn.type = 'button';
-        actionBtn.title = `Polish with ${PERSONAS[currentPersona].label}`;
-
-        // Dynamic Icon based on current persona
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'lpp-icon';
-
-        // Use SVG for ChatGPT, Emoji for others (unless we want to unify)
-        // Always use the persona icon (emoji) for consistency across all sites
-        iconSpan.textContent = PERSONAS[currentPersona].icon;
-
-        // Label (optional, hidden on some layouts)
-        const labelSpan = document.createElement('span');
-        labelSpan.className = 'lpp-label';
-        labelSpan.textContent = PERSONAS[currentPersona].label;
-        if (currentSite === 'gemini' || currentSite === 'chatgpt' || currentSite === 'claude') {
-            labelSpan.style.display = 'none';
-        }
-
-        actionBtn.appendChild(iconSpan);
-        actionBtn.appendChild(labelSpan);
-
-        // Dropdown Trigger Button
-        const triggerBtn = document.createElement('button');
-        triggerBtn.className = 'lpp-dropdown-trigger';
-        triggerBtn.type = 'button';
-        if (currentSite === 'chatgpt' || currentSite === 'claude') {
-            triggerBtn.innerHTML = ICONS.chevronDown;
-        } else {
-            triggerBtn.innerHTML = `<span class="lpp-arrow">▼</span>`;
-        }
-
-        // Event Listeners
-        actionBtn.addEventListener('click', (e) => handlePolishClick(e, inputElement));
-
-        triggerBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
+        // ── Click: polish ──
+        fab.addEventListener('click', (e) => {
+            if (isDragging) return; // ignore click after drag
             e.preventDefault();
+            e.stopPropagation();
 
-            // Toggle Logic
-            if (activeDropdownTrigger === triggerBtn) {
+            const inputElement = findInputElement();
+            if (!inputElement) {
+                showStatus('Input not found', 'error');
+                return;
+            }
+            handlePolishClick(inputElement);
+        });
+
+        // ── Right-click: persona dropdown ──
+        fab.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (activeDropdownTrigger === fab) {
                 closeActiveDropdown();
                 return;
             }
 
-            // Use portal for dropdown to escape overflow:hidden containers on Gemini
-            const rect = wrapper.getBoundingClientRect();
+            const rect = fab.getBoundingClientRect();
             createDropdownPortal(PERSONAS, (key) => {
-                // Update State
                 currentPersona = key;
-
-                // Save to chrome.storage.sync for persistence and sync with settings page
-                // Note: We only save the activePersona, not the systemPrompt
-                // This allows custom prompts to be preserved
-                chrome.storage.sync.set({
-                    activePersona: key
-                }).then(() => {
-                    console.log('[PromptSmith] Saved persona to storage:', key);
-                }).catch(err => {
-                    console.error('[PromptSmith] Error saving persona:', err);
-                });
-
-                // Update UI
-                iconSpan.textContent = PERSONAS[key].icon;
-                labelSpan.textContent = PERSONAS[key].label;
-                actionBtn.title = `Polish with ${PERSONAS[key].label}`;
-            }, rect, triggerBtn); // Pass triggerBtn for tracking
+                chrome.storage.sync.set({ activePersona: key }).catch(() => {});
+                fab.textContent = PERSONAS[key].icon;
+                fab.title = `Polish with ${PERSONAS[key].label} · Right-click to change persona`;
+            }, rect, fab);
         });
 
-        wrapper.appendChild(actionBtn);
-        wrapper.appendChild(triggerBtn);
+        // ── Drag ──
+        fab.addEventListener('mousedown', onDragStart);
+        fab.addEventListener('touchstart', onDragStart, { passive: false });
 
-        return wrapper;
+        document.body.appendChild(fab);
+        return fab;
     }
 
+    // ── Drag handlers ──
+
+    function onDragStart(e) {
+        if (e.button && e.button !== 0) return; // only left mouse
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        dragStartPos = { x: clientX, y: clientY };
+        isDragging = false;
+
+        const onMove = (ev) => {
+            const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+            const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+            const dx = cx - dragStartPos.x;
+            const dy = cy - dragStartPos.y;
+
+            if (!isDragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+                isDragging = true;
+                fabElement.classList.add('lpp-dragging');
+            }
+
+            if (isDragging) {
+                ev.preventDefault();
+                const fabRect = fabElement.getBoundingClientRect();
+                let newLeft = fabRect.left + (cx - (ev.touches ? ev.touches[0].clientX : ev.clientX) || 0);
+
+                // Direct position from cursor
+                newLeft = cx - CONFIG.FAB_SIZE / 2;
+                let newTop = cy - CONFIG.FAB_SIZE / 2;
+
+                // Clamp to viewport
+                newLeft = Math.max(0, Math.min(window.innerWidth - CONFIG.FAB_SIZE, newLeft));
+                newTop = Math.max(0, Math.min(window.innerHeight - CONFIG.FAB_SIZE, newTop));
+
+                fabElement.style.left = `${newLeft}px`;
+                fabElement.style.top = `${newTop}px`;
+                fabElement.style.right = 'auto';
+                fabElement.style.bottom = 'auto';
+
+                // Store manual offset so we stop auto-positioning
+                fabDragOffset = { left: newLeft, top: newTop };
+            }
+        };
+
+        const onEnd = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onEnd);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onEnd);
+            fabElement.classList.remove('lpp-dragging');
+
+            // Suppress the click event that fires after mouseup if we were dragging
+            if (isDragging) {
+                setTimeout(() => { isDragging = false; }, 50);
+            }
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+    }
 
     /**
-     * Helper to find Claude Toolbar specifically (Right side)
+     * Position FAB relative to the input element's bounding box.
+     * Places it just outside the bottom-right corner of the input.
      */
-    function findClaudeToolbar(inputElement) {
-        // Claude structure is typically: fieldset -> [Input] ... [Left Toolbar] ... [Right Toolbar]
-        // We want to find the toolbar containing the "Send" button (and Model Selector).
-
-        let container = inputElement.closest('fieldset');
-
-        // Fallback if not in fieldset
-        if (!container) {
-            container = inputElement.closest('div[class*="input-container"]') || inputElement.closest('form');
-        }
-
-        if (container) {
-            // Target the "Send" button
-            const sendBtn = container.querySelector(
-                'button[aria-label*="Send"], ' +
-                'button[data-testid="send-button"]'
-            );
-
-            if (sendBtn) {
-                // Return the parent container of the send button
-                return sendBtn.parentElement;
-            }
-        }
-
-        return null;
-    }
-
-
-
-
     /**
-     * Helper to find Gemini Toolbar specifically
+     * Find the outermost input container (the visible rounded box) for better anchor positioning.
      */
-    function findGeminiToolbar(inputElement) {
-        // 1. Try to find "Tools" button
-        // It helps to look broadly in the container first
-        const container = inputElement.closest('div[class*="input-area"]') || document.body;
+    function findInputContainer(inputElement) {
+        if (currentSite === 'chatgpt') {
+            return inputElement.closest('form') || inputElement.parentElement;
+        }
+        if (currentSite === 'claude') {
+            return inputElement.closest('fieldset') || inputElement.closest('form') || inputElement.parentElement;
+        }
+        if (currentSite === 'gemini') {
+            return inputElement.closest('.input-area-container') ||
+                   inputElement.closest('rich-textarea')?.parentElement ||
+                   inputElement.parentElement;
+        }
+        return inputElement.parentElement;
+    }
 
-        // Look for buttons with text content "Tools"
-        const buttons = Array.from(container.querySelectorAll('button, div[role="button"]'));
-        const toolsBtn = buttons.find(b => b.innerText.includes('Tools') || b.getAttribute('aria-label') === 'Tools');
+    function positionFAB(inputElement) {
+        if (!fabElement || fabDragOffset) return; // don't reposition if user dragged it
 
-        if (toolsBtn) {
-            return toolsBtn.parentElement;
+        // Use the outer container for positioning so we're outside the visible box
+        const container = findInputContainer(inputElement);
+        const rect = container ? container.getBoundingClientRect() : inputElement.getBoundingClientRect();
+        const offset = CONFIG.FAB_OFFSET;
+        const size = CONFIG.FAB_SIZE;
+
+        // Right-aligned, 16px inset from the container's right edge
+        let left = rect.right - size - 16;
+
+        // Determine if input is near the bottom (conversation mode)
+        const spaceBelow = window.innerHeight - rect.bottom;
+        let top;
+
+        if (spaceBelow >= size + offset + 10) {
+            // Enough room below — place FAB under the input
+            top = rect.bottom + offset;
+        } else {
+            // Input is at the bottom of viewport — place FAB above the input, right side
+            top = rect.top - size - offset;
         }
 
-        // 2. Try to find Microphone button (usually aria-label="Use microphone" or similar)
-        const micBtn = container.querySelector('div[aria-label*="microphone"], button[aria-label*="microphone"]');
-        if (micBtn) {
-            return micBtn.parentElement;
-        }
+        // Clamp to viewport
+        left = Math.max(10, Math.min(window.innerWidth - size - 10, left));
+        top = Math.max(10, Math.min(window.innerHeight - size - 10, top));
 
-        return null;
+        fabElement.style.left = `${left}px`;
+        fabElement.style.top = `${top}px`;
+        fabElement.style.right = 'auto';
+        fabElement.style.bottom = 'auto';
     }
 
     /**
-     * Helper to find ChatGPT Toolbar specifically
+     * Set up ResizeObserver + scroll/resize listeners to track the input box
      */
-    function findChatGPTToolbar(inputElement) {
-        // Look for the container that holds the send button and mic button
-        const form = inputElement.closest('form');
-        if (!form) return null;
-
-        // Strategy A: Find the send button (robust selectors)
-        // Note: Send button might not be present when input is empty
-        const sendBtn = form.querySelector('button[data-testid="send-button"], button[aria-label="Send prompt"], button[aria-label="Stop generating"]');
-        if (sendBtn) {
-            // Usually buttons are in a flex div.
-            // Check parent. If parent is just a wrapper (e.g. tooltip trigger), go up one more.
-            let parent = sendBtn.parentElement;
-
-            // Check grand-parent if parent is too small (often Tooltip wrapper)
-            if (parent && parent.className.includes('Tooltip')) {
-                parent = parent.parentElement;
-            }
-
-            // Check if this parent contains other buttons (like mic) or has flex
-            const style = window.getComputedStyle(parent);
-            if (style.display === 'flex' || style.display === 'inline-flex') {
-                return parent;
-            }
-
-            // Try one level up if we haven't found a flex container
-            if (parent.parentElement) {
-                const grandParent = parent.parentElement;
-                const grandStyle = window.getComputedStyle(grandParent);
-                if (grandStyle.display === 'flex' || grandStyle.display === 'inline-flex') {
-                    return grandParent;
-                }
-            }
-
-            // Fallback: return direct parent
-            return sendBtn.parentElement;
+    function attachTracker(inputElement) {
+        // Clean up previous observer
+        if (fabResizeObserver) {
+            fabResizeObserver.disconnect();
         }
 
-        // Strategy B: Mic/Voice buttons (Voice mode) - Updated for 2025
-        const micBtn = form.querySelector('button[aria-label*="Use microphone"], button[aria-label="Dictate button"], button[aria-label="Start voice mode"]');
-        if (micBtn) {
-            let parent = micBtn.parentElement;
-            // Traverse up to find the flex container row
-            // We expect a container with display: flex that holds the button group
-            for (let i = 0; i < 3; i++) {
-                if (!parent) break;
-                const style = window.getComputedStyle(parent);
-                if (style.display === 'flex' || style.display === 'inline-flex') {
-                    return parent;
-                }
-                parent = parent.parentElement;
-            }
-            // Fallback to direct parent if traversal fails
-            return micBtn.parentElement;
-        }
+        fabResizeObserver = new ResizeObserver(() => {
+            positionFAB(inputElement);
+        });
 
-        // Strategy C: Attachment button (often on the left)
-        // This is less ideal as we want to be on the right, but useful as a fallback anchor
-        const attachBtn = form.querySelector('button[aria-label*="Attach file"]');
-        if (attachBtn) {
-            // Try to find the common parent if we can't find the right side
-        }
+        fabResizeObserver.observe(inputElement);
 
-        return null;
-    }
-
-    /**
- * Inject button near the input element
- */
-    function injectButton(inputElement) {
-        // Check stable tracking flag on the input element itself
-        if (inputElement.dataset.lppInjected === 'true') {
-            // fast validation: check if the button we think we injected is actually still there
-            // We can look for our marker attribute inside the container or fallbacks
-            const expectedButton = document.querySelector(`[${CONFIG.MARKER_ATTR}]`);
-            if (expectedButton && document.body.contains(expectedButton)) {
-                return;
-            }
-            // If missing, reset flag and re-inject
-            inputElement.dataset.lppInjected = 'false';
-        }
-
-        const buttonWrapper = createPolishButton(inputElement);
-        const config = SITE_CONFIGS[currentSite];
-
-        // Update font based on input
-        updateHostFont(inputElement);
-
-        let injected = false;
-
-        // Specific Injection Logic
-        if (config.buttonPosition === 'toolbar-end') {
-            let toolbar = null;
-            if (currentSite === 'gemini') {
-                toolbar = findGeminiToolbar(inputElement);
-            } else if (currentSite === 'chatgpt') {
-                toolbar = findChatGPTToolbar(inputElement);
-            } else if (currentSite === 'claude') {
-                toolbar = findClaudeToolbar(inputElement);
-            }
-
-            if (toolbar) {
-                // Check if toolbar already has a button
-                if (toolbar.querySelector(`[${CONFIG.MARKER_ATTR}]`)) {
-                    return;
-                }
-
-                // DUPLICATION FIX:
-                // Check if we previously injected a "fallback" button (next to input) and remove it.
-                // This happens if the toolbar wasn't found initially but is found now.
-                const container = findContainer(inputElement);
-                if (container) {
-                    const staleButton = container.querySelector(`[${CONFIG.MARKER_ATTR}]`);
-                    if (staleButton && !toolbar.contains(staleButton)) {
-                        staleButton.remove();
-                        console.log('[PromptSmith] Removed stale fallback button');
-                    }
-                }
-
-                if (currentSite === 'chatgpt') {
-                    // For ChatGPT, we want it explicitly BEFORE the mic button if possible,
-                    // or just prepend to the toolbar so it sits left of the existing buttons.
-                    toolbar.insertBefore(buttonWrapper, toolbar.firstChild);
-                } else if (currentSite === 'claude') {
-                    // Claude: Insert before the other buttons in the right toolbar (Model Selector, Send)
-                    toolbar.insertBefore(buttonWrapper, toolbar.firstChild);
-                } else {
-                    // Gemini logic:
-                    // Try to place it nicely relative to other icons.
-                    // If we found the toolbar, we usually want to be at the end of the left-aligned tools (like gallery, etc)
-                    // or before the mic/send button.
-
-                    // Simple append often puts it at the very end.
-                    // If the toolbar is using flex-end alignment (often the right side), append works.
-                    // If it's flex-start (left side), append works to put it after the last tool.
-                    toolbar.appendChild(buttonWrapper);
-                }
-                injected = true;
-            } else {
-                console.log(`[PromptSmith] ${currentSite} toolbar not found, falling back`);
-
-                // STRICT MODE FOR CHATGPT:
-                // If we are on ChatGPT and didn't find the toolbar, DO NOT fall back to messy injection.
-                // Just return and let the observer try again when the toolbar loads.
-                if (currentSite === 'chatgpt') {
-                    return;
-                }
-            }
-        }
-
-        if (!injected) {
-            // ... fallback to standard logic ...
-            const container = findContainer(inputElement);
-            if (config.buttonPosition === 'before-submit') {
-                const submitBtn = container ? container.querySelector('button[type="submit"], button[data-testid*="send"]') : null;
-                if (submitBtn && submitBtn.parentElement) {
-                    submitBtn.parentElement.insertBefore(buttonWrapper, submitBtn);
-                    injected = true;
-                } else if (container) {
-                    container.appendChild(buttonWrapper);
-                    injected = true;
-                }
-            } else {
-                // Last ditch fallback
-                if (inputElement.nextSibling) {
-                    inputElement.parentElement.insertBefore(buttonWrapper, inputElement.nextSibling);
-                    injected = true;
-                } else {
-                    inputElement.parentElement.appendChild(buttonWrapper);
-                    injected = true;
-                }
-            }
-        }
-
-        if (injected) {
-            inputElement.dataset.lppInjected = 'true';
-            console.log('[PromptSmith] Button injected successfully');
-        }
+        // Also observe ancestor scroll containers
+        const scrollHandler = () => positionFAB(inputElement);
+        window.addEventListener('resize', scrollHandler);
+        window.addEventListener('scroll', scrollHandler, true); // capture for nested scrolls
     }
 
     // ============================================================
-    // CLICK HANDLER
+    // SPARKLE EFFECT
     // ============================================================
 
-    async function handlePolishClick(event, inputElement) {
-        event.preventDefault();
-        event.stopPropagation();
+    function playSparkle() {
+        if (!fabElement) return;
 
-        const actionBtn = event.currentTarget;
-        const wrapper = actionBtn.closest('.lpp-button-group');
+        fabElement.classList.remove('lpp-sparkle');
+        // Force reflow to restart animation
+        void fabElement.offsetWidth;
+        fabElement.classList.add('lpp-sparkle');
 
+        // Emit particles
+        const rect = fabElement.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const particles = ['✨', '⭐', '💫', '✦'];
+
+        for (let i = 0; i < 6; i++) {
+            const p = document.createElement('span');
+            p.className = 'lpp-sparkle-particle';
+            p.textContent = particles[i % particles.length];
+
+            const angle = (Math.PI * 2 / 6) * i;
+            const dist = 25 + Math.random() * 15;
+            p.style.left = `${cx}px`;
+            p.style.top = `${cy}px`;
+            p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+            p.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 700);
+        }
+
+        setTimeout(() => fabElement.classList.remove('lpp-sparkle'), 500);
+    }
+
+    // ============================================================
+    // POLISH HANDLER
+    // ============================================================
+
+    async function handlePolishClick(inputElement) {
         const originalText = getInputText(inputElement);
 
         if (!originalText || originalText.trim().length === 0) {
-            showStatus('Please enter some text first', 'error');
+            showStatus('No text to polish', 'error');
             return;
         }
 
-        // Show loading state on the wrapper/action button
-        wrapper.classList.add('lpp-loading');
-        showStatus(`✨ Polishing as ${PERSONAS[currentPersona].label}...`, 'info');
+        fabElement.classList.add('lpp-loading');
+        showStatus('Polishing...', 'info');
 
         try {
-            // Determine the system prompt to use
-            // Priority: 1. Custom prompt saved for this persona, 2. Default PERSONAS instruction
             let systemPrompt = customPersonaPrompts[currentPersona] || PERSONAS[currentPersona].instruction;
 
-            // Special handling for Custom persona: ensure a valid prompt is configured
             if (currentPersona === 'custom') {
-                // Check if the custom persona has a custom prompt saved
-                // customPersonaPrompts is already loaded at init and synced via storage listener
                 const customPrompt = customPersonaPrompts['custom'];
-
-                // Validate the custom prompt exists and isn't placeholder text
                 if (!customPrompt ||
                     customPrompt.trim() === '' ||
                     customPrompt === '[CUSTOM_PROMPT_PLACEHOLDER]' ||
                     customPrompt.startsWith('[Enter your custom system prompt here]')) {
-                    showStatus('❌ Custom prompt not configured. Please set one in Settings.', 'error');
-                    wrapper.classList.remove('lpp-loading');
+                    showStatus('Set a custom prompt in Settings', 'error');
+                    fabElement.classList.remove('lpp-loading');
                     return;
                 }
                 systemPrompt = customPrompt;
@@ -1145,11 +798,7 @@
 
             const response = await new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage(
-                    {
-                        type: 'POLISH_TEXT',
-                        text: originalText,
-                        systemPrompt: systemPrompt
-                    },
+                    { type: 'POLISH_TEXT', text: originalText, systemPrompt },
                     (response) => {
                         if (chrome.runtime.lastError) {
                             reject(new Error(chrome.runtime.lastError.message));
@@ -1167,33 +816,20 @@
             const success = setInputText(inputElement, response.text);
 
             if (success) {
-                wrapper.classList.remove('lpp-loading');
-                wrapper.classList.add('lpp-success');
+                fabElement.classList.remove('lpp-loading');
 
-                // Map mode to user-friendly indicator
-                let modeIndicator = '☁️ Cloud';
-                if (response.mode === 'local') {
-                    modeIndicator = '⚡ Local';
-                }
-                showStatus(`✓ Done! (${modeIndicator})`, 'success');
+                // Sparkle effect!
+                playSparkle();
 
-                setTimeout(() => {
-                    wrapper.classList.remove('lpp-success');
-                }, 2000);
+                showStatus('Done', 'success');
             } else {
                 throw new Error('Failed to update input field');
             }
 
         } catch (error) {
             console.error('[PromptSmith] Polish error:', error);
-            wrapper.classList.remove('lpp-loading');
-            wrapper.classList.add('lpp-error');
-
-            showStatus(`Error: ${error.message}`, 'error');
-
-            setTimeout(() => {
-                wrapper.classList.remove('lpp-error');
-            }, 3000);
+            fabElement.classList.remove('lpp-loading');
+            showStatus('Failed to polish', 'error');
         }
     }
 
@@ -1201,72 +837,55 @@
     // STATUS POPUP
     // ============================================================
 
-    /**
-     * Show a status popup message
-     */
+    let statusTimer = null;
+
     function showStatus(message, type = 'info') {
-        const existing = document.querySelector('.lpp-status-popup');
-        if (existing) {
-            existing.remove();
+        if (statusTimer) clearTimeout(statusTimer);
+
+        let el = document.querySelector('.lpp-status');
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'lpp-status';
+            document.body.appendChild(el);
         }
 
-        const popup = document.createElement('div');
-        popup.className = `lpp-status-popup lpp-${type}`;
-        popup.textContent = message;
+        // Position next to the FAB
+        if (fabElement) {
+            const r = fabElement.getBoundingClientRect();
+            el.style.top = `${r.top + r.height / 2 - 10}px`;
+            // Place to the left of the FAB
+            el.style.left = 'auto';
+            el.style.right = `${window.innerWidth - r.left + 8}px`;
+        }
 
-        document.body.appendChild(popup);
+        el.textContent = message;
+        el.className = `lpp-status lpp-${type}`;
 
-        setTimeout(() => {
-            popup.classList.add('lpp-hiding');
-            setTimeout(() => popup.remove(), 300);
-        }, 3000);
+        // Force reflow then fade in
+        void el.offsetWidth;
+        el.classList.add('lpp-visible');
+
+        const duration = type === 'info' ? 10000 : 2500;
+        statusTimer = setTimeout(() => {
+            el.classList.remove('lpp-visible');
+            setTimeout(() => el.remove(), 250);
+            statusTimer = null;
+        }, duration);
     }
 
     // ============================================================
-    // MUTATION OBSERVER
+    // KEEP ALIVE
     // ============================================================
 
-    function debouncedObserverCallback() {
-        if (debounceTimer) {
-            clearTimeout(debounceTimer);
-        }
-
-        debounceTimer = setTimeout(() => {
-            tryInjectButton();
-        }, CONFIG.DEBOUNCE_DELAY);
-    }
-
-    function tryInjectButton() {
-        const inputElement = findInputElement();
-
-        if (inputElement) {
-            injectButton(inputElement);
-        }
-    }
-
-
-
-    /**
-     * Keep Alive Connection
-     * Connects to background script to keep Service Worker alive while this tab is active.
-     */
     function connectKeepAlive() {
         try {
             const port = chrome.runtime.connect({ name: 'keep-alive' });
             port.onDisconnect.addListener(() => {
-                console.log('[PromptSmith] Keep-alive disconnected, reconnecting...');
                 setTimeout(connectKeepAlive, 1000);
             });
-
-            // Optional: Send ping periodically to defeat idle timers
             const interval = setInterval(() => {
-                try {
-                    port.postMessage({ type: 'ping' });
-                } catch (e) {
-                    clearInterval(interval);
-                }
-            }, 20000); // 20 seconds
-
+                try { port.postMessage({ type: 'ping' }); } catch (e) { clearInterval(interval); }
+            }, 20000);
         } catch (e) {
             console.error('[PromptSmith] Error connecting keep-alive:', e);
         }
@@ -1276,90 +895,93 @@
     // INITIALIZATION
     // ============================================================
 
-    /**
-     * initialize
-     */
+    function ensureFAB() {
+        // Re-inject if our FAB was wiped by a hard SPA re-render
+        if (fabElement && document.body.contains(fabElement)) return;
+
+        fabElement = createFAB();
+
+        const inputElement = findInputElement();
+        if (inputElement) {
+            positionFAB(inputElement);
+            attachTracker(inputElement);
+        }
+    }
+
     async function init() {
-        // Load PERSONAS from prompts.js first
         await loadPersonas();
 
         currentSite = detectSite();
         if (!currentSite) return;
 
-        // Check if site is enabled and load active persona + custom prompts
         const storage = await chrome.storage.sync.get(['enabledSites', 'activePersona', 'customPersonaPrompts']);
         const enabledSites = storage.enabledSites || { chatgpt: true, claude: true, gemini: true };
-
-        // Load custom prompts from settings
         customPersonaPrompts = storage.customPersonaPrompts || {};
-        console.log('[PromptSmith] Loaded custom prompts for personas:', Object.keys(customPersonaPrompts));
-
-        // Default to 'polisher' on load, ignoring previous session state per user request.
-        // We do typically sync activePersona, but on fresh page load we want to reset to Polisher.
-        console.log('[PromptSmith] Defaulting active persona to:', currentPersona);
 
         if (enabledSites[currentSite] === false) {
-            console.log(`[PromptSmith] ${currentSite} is disabled in settings. Skipping injection.`);
+            console.log(`[PromptSmith] ${currentSite} is disabled in settings.`);
             return;
         }
-        console.log(`[PromptSmith] Site ${currentSite} is enabled. Settings:`, enabledSites);
 
         injectStyles();
 
-        // Start observer
-        const observer = new MutationObserver((mutations) => {
+        // MutationObserver: re-inject FAB if wiped, re-track if input changes
+        let lastInputElement = null;
+
+        const observer = new MutationObserver(() => {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
+                ensureFAB();
+
                 const input = findInputElement();
-                if (input) {
-                    injectButton(input);
+                if (input && input !== lastInputElement) {
+                    lastInputElement = input;
+                    positionFAB(input);
+                    attachTracker(input);
                 }
             }, CONFIG.DEBOUNCE_DELAY);
         });
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+        observer.observe(document.body, { childList: true, subtree: true });
 
-        // Initial check
-
+        // Initial injection with slight delay for SPA hydration
         setTimeout(() => {
+            ensureFAB();
             const input = findInputElement();
             if (input) {
-                injectButton(input);
+                lastInputElement = input;
+                positionFAB(input);
+                attachTracker(input);
             }
         }, 1000);
 
-        // Log AI mode on startup
+        // Log AI mode
         chrome.runtime.sendMessage({ type: 'GET_AI_MODE' }, (response) => {
-            if (response) {
-                console.log('[PromptSmith] AI Mode:', response.status);
-            }
+            if (response) console.log('[PromptSmith] AI Mode:', response.status);
         });
 
-        // Init keep-alive
         connectKeepAlive();
 
-        // Listen for storage changes to sync custom prompts in real-time
+        // Sync storage changes
         chrome.storage.onChanged.addListener((changes, namespace) => {
             if (namespace === 'sync') {
                 if (changes.customPersonaPrompts) {
                     customPersonaPrompts = changes.customPersonaPrompts.newValue || {};
-                    console.log('[PromptSmith] Custom prompts updated from settings');
                 }
                 if (changes.activePersona && changes.activePersona.newValue) {
                     const newPersona = changes.activePersona.newValue;
                     if (PERSONAS && PERSONAS[newPersona]) {
                         currentPersona = newPersona;
-                        console.log('[PromptSmith] Active persona synced from settings:', currentPersona);
+                        if (fabElement) {
+                            fabElement.textContent = PERSONAS[newPersona].icon;
+                            fabElement.title = `Polish with ${PERSONAS[newPersona].label} · Right-click to change persona`;
+                        }
                     }
                 }
             }
         });
     }
 
-    // Run on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

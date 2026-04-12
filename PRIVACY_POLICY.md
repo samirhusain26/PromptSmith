@@ -1,6 +1,6 @@
 # Privacy Policy for PromptSmith
 
-**Last Updated:** December 13, 2024
+**Last Updated:** April 12, 2026
 
 ## Overview
 

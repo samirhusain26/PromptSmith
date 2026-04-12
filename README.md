@@ -1,4 +1,4 @@
-# ✨ PromptSmith v1.2
+# ✨ PromptSmith v2.0
 
 > **Privacy-first AI prompt refinement for Chrome.**
 
@@ -72,9 +72,9 @@ The extension uses a "Smart Mode" logic to determine how to process your prompt:
 
 ### Supported Cloud Models
 - **Google Gemini**:
-  - `Gemini 3.0 Flash` (Newest, Experimental)
-  - `Gemini 2.5 Flash` (Balanced)
-  - `Gemini 2.0 Flash` (Reliable, Cheap)
+  - `Gemini 3 Flash` (Newest, Experimental Preview)
+  - `Gemini 2.5 Flash` (Balanced Speed & Logic)
+  - `Gemini 2.0 Flash` (Reliable Utility)
 - **Groq (Llama)**:
   - `Llama 3.3 70B Versatile` (Smartest Open Source)
   - `Llama 3.1 8B Instant` (Fastest)
@@ -87,12 +87,12 @@ The extension uses a "Smart Mode" logic to determine how to process your prompt:
 
 PromptSmith offers 4 specialized personas for different prompt transformation needs:
 
-| Persona | Icon | Use Case |
-|---------|------|----------|
-| **Polisher** | ✨ | **Grammar & Clarity**: Professional tone, concise, readable. |
-| **Developer** | 💻 | **Code & Data**: Structured output (JSON, XML), edge case handling. |
-| **Thinker** | 🧠 | **Reasoning**: Chain of Thought, step-by-step verification. |
-| **Custom** | ⚙️ | **Yours**: Fully customizable from the Settings page. |
+| Persona | Icon | Focus Area | Framework/Logic |
+|---------|------|------------|-----------------|
+| **Polisher** | ✨ | **Grammar & Clarity** | Professional editing for technical documentation. |
+| **Developer** | 💻 | **Code & Data** | **KERNEL Framework**: XML-tagged, optimized for LLM inference. |
+| **Thinker** | 🧠 | **Reasoning** | **DEPTH Framework**: ReAct Loop & Tree of Thoughts simulation. |
+| **Custom** | ⚙️ | **Yours** | Fully customizable from the Settings page. |
 
 > [!TIP]
 > You can edit the system instructions for **any** persona in the Options page. Changes are saved per-persona.

@@ -17,7 +17,7 @@ export const DEFAULT_GROQ_MODEL = 'llama-3.1-8b-instant';
 
 // Default Settings
 export const DEFAULT_CLOUD_PROVIDER = 'gemini';
-export const DEFAULT_PERSONA = 'polisher';
+export const DEFAULT_PERSONA = 'editor';
 
 // Cloud Provider Models
 export const CLOUD_MODELS = {

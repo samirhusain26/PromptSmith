@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "PromptSmith",
-    "version": "1.2",
+    "version": "2.0",
     "description": "Polish your prompts with AI. Use Gemini Nano locally or cloud APIs (Gemini, Groq). Works on ChatGPT, Claude, & Gemini.",
     "author": "PromptSmith",
     "permissions": [
@@ -53,7 +53,8 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "prompts.js"
+                "prompts.js",
+                "PRIVACY_POLICY.md"
             ],
             "matches": [
                 "https://chat.openai.com/*",
